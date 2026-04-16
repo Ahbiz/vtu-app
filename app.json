@@ -30,15 +30,22 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/vtu-splash-screen.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#2C14DD",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#2C14DD"
           }
         }
-      ]
+      ],
+      [
+        "expo-color-space-plugin",
+        {
+          "colorSpace": "displayP3"
+        }
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,

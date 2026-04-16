@@ -1,98 +1,199 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+  FlatList,
+  ViewToken,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Image } from "expo-image";
+import { useRouter } from "expo-router";
+import { useFonts, Poppins_600SemiBold } from "@expo-google-fonts/poppins";
+import { useState, useRef, useCallback } from "react";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+const { width } = Dimensions.get("window");
 
-export default function HomeScreen() {
+// Image and titles
+const ONBOARDING_PAGES = [
+  {
+    id: "1",
+    image: require("@/assets/images/onboarding1.png"),
+    title: "Data at your fingertips",
+  },
+  {
+    id: "2",
+    image: require("@/assets/images/onboarding2.png"),
+    title: "Top up in seconds",
+  },
+  {
+    id: "3",
+    image: require("@/assets/images/onboarding3.png"),
+    title: "Pay bills with ease",
+  },
+];
+
+// pagination
+function PaginationDots({ currentPage }: { currentPage: number }) {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <View style={styles.dotsContainer}>
+      {ONBOARDING_PAGES.map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.dot,
+            index === currentPage ? styles.dotActive : styles.dotInactive,
+          ]}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+      ))}
+    </View>
+  );
+}
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+export default function Home() {
+  const [fontsLoaded] = useFonts({ Poppins_600SemiBold });
+  const [currentPage, setCurrentPage] = useState(0);
+  const flatListRef = useRef<FlatList>(null);
+  const router = useRouter();
+
+  if (!fontsLoaded) return null;
+
+  const isLastPage = currentPage === ONBOARDING_PAGES.length - 1;
+
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      if (viewableItems.length > 0) {
+        setCurrentPage(viewableItems[0].index ?? 0);
+      }
+    },
+    [],
+  );
+
+  const viewabilityConfig = { viewAreaCoveragePercentThreshold: 50 };
+
+  // Next button
+  const handleNext = () => {
+    if (isLastPage) {
+      router.push("/Signup");
+    } else {
+      flatListRef.current?.scrollToIndex({
+        index: currentPage + 1,
+        animated: true,
+      });
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <FlatList
+        ref={flatListRef}
+        data={ONBOARDING_PAGES}
+        keyExtractor={(item) => item.id}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        bounces={false}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        renderItem={({ item }) => (
+          <View style={styles.page}>
+            <View style={styles.imageWrapper}>
+              <Image
+                contentFit="contain"
+                source={item.image}
+                style={[
+                  styles.illusImg,
+                  item.id === "1" && { transform: [{ scale: 1.25 }], marginLeft: 30 },
+                ]}
+              />
+            </View>
+            <Text style={styles.headline}>{item.title}</Text>
+          </View>
+        )}
+      />
+
+      <PaginationDots currentPage={currentPage} />
+
+      <View style={styles.buttonZone}>
+        <TouchableOpacity style={styles.button} onPress={handleNext}>
+          <Text style={styles.buttonText}>
+            {isLastPage ? "Get Started" : "Next"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  container: {
+    backgroundColor: "#6366FF",
+    flex: 1,
+  },
+  page: {
+    width: width,
+    alignItems: "center",
+  },
+
+  illusImg: {
+    width: width * 0.85,
+    height: width * 0.85,
+    maxWidth: 350,
+    maxHeight: 350,
+    marginTop: 140,
+    marginBottom: 15,
+  },
+  imageWrapper: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headline: {
+    textAlign: "center",
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 26,
+    fontWeight: "600",
+    color: "#1A1A2E",
+    letterSpacing: 0.4,
+    lineHeight: 36,
+    paddingHorizontal: 32,
+  },
+
+  dotsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 24,
     gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  dot: {
+    height: 10,
+    borderRadius: 5,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  dotActive: {
+    width: 18,
+    backgroundColor: "#ffffff",
+  },
+  dotInactive: {
+    width: 10,
+    backgroundColor: "rgba(255,255,255,0.35)",
+  },
+
+  buttonZone: {
+    paddingHorizontal: 32,
+    marginTop: 40,
+    marginBottom: 16,
+  },
+  button: {
+    backgroundColor: "#1A1A2E",
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#ffffff",
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

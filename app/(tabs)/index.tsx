@@ -15,7 +15,6 @@ import { useState, useRef, useCallback } from "react";
 
 const { width } = Dimensions.get("window");
 
-// Image and titles
 const ONBOARDING_PAGES = [
   {
     id: "1",
@@ -34,7 +33,7 @@ const ONBOARDING_PAGES = [
   },
 ];
 
-// pagination
+
 function PaginationDots({ currentPage }: { currentPage: number }) {
   return (
     <View style={styles.dotsContainer}>
@@ -72,7 +71,6 @@ export default function Home() {
 
   const viewabilityConfig = { viewAreaCoveragePercentThreshold: 50 };
 
-  // Next button
   const handleNext = () => {
     if (isLastPage) {
       router.push("/Onboarding");

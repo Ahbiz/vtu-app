@@ -21,8 +21,8 @@ export default function Onboarding() {
         <TouchableOpacity style={styles.logbtncon} onPress={() => router.push("/LoggingPage")}>
           <Text style={styles.logbtn}>Login</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.regbtncon}>
-          <Text style={styles.regbtn} onPress={() => router.push("/RegisterPage")}>Register</Text>
+        <TouchableOpacity style={styles.regbtncon} onPress={() => router.push("/RegisterPage")}>
+          <Text style={styles.regbtn}>Register</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

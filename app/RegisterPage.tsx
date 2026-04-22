@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState } from "react";
 import CountryPicker, { Country } from "react-native-country-picker-modal";
@@ -11,12 +11,34 @@ export default function RegisterPage() {
     const [countryCode, setCountryCode] = useState<any>("NG");
     const [callingCode, setCallingCode] = useState("234");
     const [pickerVisible, setPickerVisible] = useState(false);
-    const [phoneNumber, setPhoneNumber] = useState("")
+    const [fullName, setFullName] = useState("");
+    const [email, setEmail] = useState("");
+    const [phoneNumber, setPhoneNumber] = useState("");
+    const [password, setPassword] = useState("");
 
     const onSelectCountry = (country: Country) => {
         setCountryCode(country.cca2);
         setCallingCode(country.callingCode[0]);
         setPickerVisible(false);
+    };
+
+    const handleContinue = () => {
+
+        if (!fullName.trim() || !email.trim() || !phoneNumber.trim() || !password.trim()) {
+            Alert.alert("Error", "Please fill in all fields before proceeding.");
+            return;
+        }
+
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email.trim())) {
+            Alert.alert("Validation Error", "Please enter a valid email address.");
+            return;
+        }
+
+
+        const fullPhoneNumber = `+${callingCode} ${phoneNumber}`;
+        router.push({ pathname: "/OtpPage", params: { phoneNumber: fullPhoneNumber } });
     };
 
     return (
@@ -41,6 +63,8 @@ export default function RegisterPage() {
                             style={styles.input}
                             placeholder="Jimmy Grammy"
                             placeholderTextColor="#AAAAAA"
+                            value={fullName}
+                            onChangeText={setFullName}
                         />
                     </View>
 
@@ -50,6 +74,10 @@ export default function RegisterPage() {
                             style={styles.input}
                             placeholder="Jimmygrammy@gmail.com"
                             placeholderTextColor="#AAAAAA"
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            value={email}
+                            onChangeText={setEmail}
                         />
                     </View>
 
@@ -92,6 +120,8 @@ export default function RegisterPage() {
                                 placeholder="Enter New Password"
                                 placeholderTextColor="#AAAAAA"
                                 secureTextEntry={!showPassword}
+                                value={password}
+                                onChangeText={setPassword}
                             />
                             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                                 <Ionicons
@@ -102,7 +132,9 @@ export default function RegisterPage() {
                             </TouchableOpacity>
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.button} onPress={() => router.push({ pathname: "/OtpPage", params: { phoneNumber } })}><Text style={styles.buttontext}>Continue</Text></TouchableOpacity>
+                    <TouchableOpacity style={styles.button} onPress={handleContinue}>
+                        <Text style={styles.buttontext}>Continue</Text>
+                    </TouchableOpacity>
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>

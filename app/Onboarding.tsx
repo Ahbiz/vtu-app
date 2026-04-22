@@ -18,7 +18,7 @@ export default function Onboarding() {
       </View>
 
       <View style={styles.btns}>
-        <TouchableOpacity style={styles.logbtncon}>
+        <TouchableOpacity style={styles.logbtncon} onPress={() => router.push("/LoggingPage")}>
           <Text style={styles.logbtn}>Login</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.regbtncon}>
@@ -31,7 +31,7 @@ export default function Onboarding() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#6366FF",
+    backgroundColor: "#4444FF",
     flex: 1,
     justifyContent: "space-between",
     paddingBottom: 50,

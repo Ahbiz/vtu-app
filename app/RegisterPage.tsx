@@ -3,13 +3,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useState } from "react";
 import CountryPicker, { Country } from "react-native-country-picker-modal";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 export default function RegisterPage() {
-
+    const router = useRouter()
     const [showPassword, setShowPassword] = useState(false);
     const [countryCode, setCountryCode] = useState<any>("NG");
     const [callingCode, setCallingCode] = useState("234");
     const [pickerVisible, setPickerVisible] = useState(false);
+    const [phoneNumber, setPhoneNumber] = useState("")
 
     const onSelectCountry = (country: Country) => {
         setCountryCode(country.cca2);
@@ -73,6 +75,8 @@ export default function RegisterPage() {
 
                             <TextInput
                                 style={[styles.input, styles.phoneNumberInput]}
+                                value={phoneNumber}
+                                onChangeText={setPhoneNumber}
                                 placeholder="Enter Phone Number"
                                 placeholderTextColor="#AAAAAA"
                                 keyboardType="phone-pad"
@@ -98,7 +102,7 @@ export default function RegisterPage() {
                             </TouchableOpacity>
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.button}><Text style={styles.buttontext}>Continue</Text></TouchableOpacity>
+                    <TouchableOpacity style={styles.button} onPress={() => router.push({ pathname: "/OtpPage", params: { phoneNumber } })}><Text style={styles.buttontext}>Continue</Text></TouchableOpacity>
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>

@@ -18,8 +18,33 @@ export default function RegisterPage() {
 
     const onSelectCountry = (country: Country) => {
         setCountryCode(country.cca2);
-        setCallingCode(country.callingCode[0]);
+        setCallingCode(country.callingCode[0])
         setPickerVisible(false);
+    };
+
+    const formatPhoneNumber = (text: string) => {
+        const cleaned = text.replace(/\D/g, '');
+        const startsWithZero = cleaned.startsWith('0');
+        const group1Size = startsWithZero ? 4 : 3;
+        const group2Size = 3;
+        const group3Size = 4;
+
+        let formatted = '';
+        if (cleaned.length > 0) {
+            formatted += cleaned.substring(0, group1Size);
+        }
+        if (cleaned.length > group1Size) {
+            formatted += ' ' + cleaned.substring(group1Size, group1Size + group2Size);
+        }
+        if (cleaned.length > group1Size + group2Size) {
+            formatted += ' ' + cleaned.substring(group1Size + group2Size, group1Size + group2Size + group3Size);
+        }
+
+        return formatted;
+    };
+
+    const handlePhoneNumberChange = (text: string) => {
+        setPhoneNumber(formatPhoneNumber(text));
     };
 
     const handleContinue = () => {
@@ -104,7 +129,7 @@ export default function RegisterPage() {
                             <TextInput
                                 style={[styles.input, styles.phoneNumberInput]}
                                 value={phoneNumber}
-                                onChangeText={setPhoneNumber}
+                                onChangeText={handlePhoneNumberChange}
                                 placeholder="Enter Phone Number"
                                 placeholderTextColor="#AAAAAA"
                                 keyboardType="phone-pad"

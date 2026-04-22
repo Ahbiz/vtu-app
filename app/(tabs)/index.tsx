@@ -75,7 +75,7 @@ export default function Home() {
   // Next button
   const handleNext = () => {
     if (isLastPage) {
-      router.push("/Signup");
+      router.push("/Onboarding");
     } else {
       flatListRef.current?.scrollToIndex({
         index: currentPage + 1,

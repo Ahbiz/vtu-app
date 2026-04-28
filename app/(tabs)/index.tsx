@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import { useFonts, Poppins_600SemiBold } from "@expo-google-fonts/poppins";
 import { useState, useRef, useCallback } from "react";
 
+
 const { width } = Dimensions.get("window");
 
 const ONBOARDING_PAGES = [
@@ -84,42 +85,42 @@ export default function Home() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <FlatList
-        ref={flatListRef}
-        data={ONBOARDING_PAGES}
-        keyExtractor={(item) => item.id}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        bounces={false}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        renderItem={({ item }) => (
-          <View style={styles.page}>
-            <View style={styles.imageWrapper}>
-              <Image
-                contentFit="contain"
-                source={item.image}
-                style={[
-                  styles.illusImg,
-                  item.id === "1" && { transform: [{ scale: 1.25 }], marginLeft: 30 },
-                ]}
-              />
+        <FlatList
+          ref={flatListRef}
+          data={ONBOARDING_PAGES}
+          keyExtractor={(item) => item.id}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          bounces={false}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          renderItem={({ item }) => (
+            <View style={styles.page}>
+              <View style={styles.imageWrapper}>
+                <Image
+                  contentFit="contain"
+                  source={item.image}
+                  style={[
+                    styles.illusImg,
+                    item.id === "1" && { transform: [{ scale: 1.25 }], marginLeft: 30 },
+                  ]}
+                />
+              </View>
+              <Text style={styles.headline}>{item.title}</Text>
             </View>
-            <Text style={styles.headline}>{item.title}</Text>
-          </View>
-        )}
-      />
+          )}
+        />
 
-      <PaginationDots currentPage={currentPage} />
+        <PaginationDots currentPage={currentPage} />
 
-      <View style={styles.buttonZone}>
-        <TouchableOpacity style={styles.button} onPress={handleNext}>
-          <Text style={styles.buttonText}>
-            {isLastPage ? "Get Started" : "Next"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.buttonZone}>
+          <TouchableOpacity style={styles.button} onPress={handleNext}>
+            <Text style={styles.buttonText}>
+              {isLastPage ? "Get Started" : "Next"}
+            </Text>
+          </TouchableOpacity>
+        </View>
     </SafeAreaView>
   );
 }

@@ -24,7 +24,7 @@ export default function DataPurchaseScreen() {
     const [selectedNetwork, setSelectedNetwork] = useState<string | null>("MTN");
     const [dataPlan, setDataPlan] = useState("");
     const [phone, setPhone] = useState("");
-    const [password, setPassword] = useState("");
+    const [pin, setPin] = useState("");
 
     const [isPlanModalVisible, setPlanModalVisible] = useState(false);
 
@@ -120,19 +120,21 @@ export default function DataPurchaseScreen() {
                     </TouchableOpacity>
                 </View>
 
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>Transaction PIN</Text>
                 <View style={[styles.inputContainer, { marginBottom: 8 }]}>
                     <TextInput
                         style={styles.input}
-                        placeholder="••••••••"
+                        placeholder="••••"
                         placeholderTextColor="#A0ABC0"
+                        keyboardType="number-pad"
                         secureTextEntry
-                        value={password}
-                        onChangeText={setPassword}
+                        maxLength={4}
+                        value={pin}
+                        onChangeText={setPin}
                     />
                 </View>
-                <TouchableOpacity style={styles.forgotBtn}>
-                    <Text style={styles.forgotText}>Forgot your password?</Text>
+                <TouchableOpacity style={styles.forgotBtn} onPress={() => router.push("/ForgotPinScreen")}>
+                    <Text style={styles.forgotText}>Forgot PIN?</Text>
                 </TouchableOpacity>
 
             </ScrollView>

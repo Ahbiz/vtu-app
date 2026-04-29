@@ -47,7 +47,7 @@ export default function WalletScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
-                {/* ─── Header ─── */}
+
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Wallet</Text>
                     <TouchableOpacity style={styles.headerMenuBtn}>
@@ -55,7 +55,7 @@ export default function WalletScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* ─── Virtual Accounts Section ─── */}
+
                 <View style={styles.sectionWrapper}>
                     <Text style={styles.sectionTitle}>Virtual Account:</Text>
 
@@ -87,7 +87,7 @@ export default function WalletScreen() {
                     ))}
                 </View>
 
-                {/* ─── Quick Actions ─── */}
+
                 <View style={styles.actionsSection}>
                     <Text style={styles.sectionTitleSmall}>Quick Actions</Text>
                     <View style={styles.actionsRow}>
@@ -112,7 +112,7 @@ export default function WalletScreen() {
                     </View>
                 </View>
 
-                {/* ─── Transaction History ─── */}
+
                 <View style={styles.transactionsSection}>
                     <Text style={styles.sectionTitleSmall}>Transaction History</Text>
                     <View style={styles.emptyState}>
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
     },
 
-    /* ── Header ── */
+
     header: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
 
-    /* ── Virtual Accounts ── */
+
     sectionWrapper: {
         paddingHorizontal: 20,
         paddingTop: 20,
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
         color: "rgba(255,255,255,0.9)",
     },
 
-    /* ── Quick Actions ── */
+
     actionsSection: {
         paddingHorizontal: 20,
         paddingTop: 24,
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
     },
 
-    /* ── Transactions ── */
+
     transactionsSection: {
         paddingHorizontal: 20,
         marginTop: 28,

@@ -25,7 +25,7 @@ export default function ResetOtpScreen() {
         }
 
         console.log('Verify this code for reset:', otp);
-        // Navigate to the next screen in the flow
+
         router.push('/CreateNewPasswordScreen'); 
     };
 

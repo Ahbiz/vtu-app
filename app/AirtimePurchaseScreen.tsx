@@ -30,7 +30,7 @@ export default function AirtimePurchaseScreen() {
     const [selectedNetwork, setSelectedNetwork] = useState<string | null>("MTN");
     const [amount, setAmount] = useState("");
     const [phone, setPhone] = useState("");
-    const [password, setPassword] = useState("");
+    const [pin, setPin] = useState("");
 
     if (!fontsLoaded) return null;
 
@@ -113,17 +113,22 @@ export default function AirtimePurchaseScreen() {
                     </TouchableOpacity>
                 </View>
 
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>Transaction PIN</Text>
                 <View style={[styles.inputContainer, { marginBottom: 8 }]}>
                     <TextInput
                         style={styles.input}
-                        placeholder="••••••••"
+                        placeholder="••••"
                         placeholderTextColor="#A0ABC0"
+                        keyboardType="number-pad"
                         secureTextEntry
-                        value={password}
-                        onChangeText={setPassword}
+                        maxLength={4}
+                        value={pin}
+                        onChangeText={setPin}
                     />
                 </View>
+                <TouchableOpacity style={styles.forgotBtn} onPress={() => router.push("/ForgotPinScreen")}>
+                    <Text style={styles.forgotText}>Forgot PIN?</Text>
+                </TouchableOpacity>
 
             </ScrollView>
 
@@ -162,6 +167,8 @@ const styles = StyleSheet.create({
     input: { flex: 1, fontSize: 14, fontFamily: "Poppins_500Medium", color: "#111" },
     phoneRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
     contactBtn: { width: 54, height: 54, backgroundColor: "#E6F0FF", borderRadius: 10, justifyContent: "center", alignItems: "center" },
+    forgotBtn: { alignSelf: "flex-end" },
+    forgotText: { fontSize: 13, fontFamily: "Poppins_600SemiBold", color: "#111" },
     bottomContainer: { paddingHorizontal: 20, paddingBottom: Platform.OS === "ios" ? 10 : 20 },
     payBtn: { backgroundColor: "#0052CC", height: 56, borderRadius: 12, justifyContent: "center", alignItems: "center" },
     payBtnText: { fontSize: 16, fontFamily: "Poppins_600SemiBold", color: "#FFFFFF" },

@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         justifyContent: 'center',
-        alignItems: 'flex-start', // Align icon slightly better if without background
+        alignItems: 'flex-start',
         marginRight: 10,
     },
     optionText: {

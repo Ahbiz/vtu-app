@@ -40,16 +40,16 @@ export default function HomeScreen() {
 
     if (!fontsLoaded) return null;
 
-    // Use the first virtual account for the quick-access card on dashboard
+
     const primaryAccount = VIRTUAL_ACCOUNTS[0];
 
-    // Responsive grid
+
     const gridPadding = 20;
     const gridGap = 12;
     const numColumns = width > 400 ? 4 : 3;
     const itemWidth = (width - gridPadding * 2 - gridGap * (numColumns - 1)) / numColumns;
 
-    // Promo card width for horizontal scroll
+
     const promoCardWidth = width * 0.72;
 
     const handleCopyAccount = async (accountNumber: string, id: string) => {
@@ -58,7 +58,7 @@ export default function HomeScreen() {
             setCopiedId(id);
             setTimeout(() => setCopiedId(null), 2000);
         } catch {
-            // Clipboard not available — silently fail
+
         }
     };
 
@@ -70,7 +70,7 @@ export default function HomeScreen() {
                 contentContainerStyle={styles.scrollContent}
                 bounces={true}
             >
-                {/* ─── Header Section ─── */}
+
                 <View style={styles.header}>
                     <View style={styles.headerLeft}>
                         <View style={styles.avatarContainer}>
@@ -87,7 +87,7 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* ─── Balance Card ─── */}
+
                 <View style={styles.balanceCard}>
                     <View style={styles.balanceCardInner}>
                         <View style={styles.balanceTopRow}>
@@ -117,7 +117,7 @@ export default function HomeScreen() {
                     </View>
                 </View>
 
-                {/* ─── Quick Account Access ─── */}
+
                 {primaryAccount && (
                     <View style={styles.quickAccountSection}>
                         <TouchableOpacity
@@ -153,7 +153,7 @@ export default function HomeScreen() {
                     </View>
                 )}
 
-                {/* ─── Services Grid ─── */}
+
                 <View style={styles.servicesSection}>
                     <View style={[styles.servicesGrid, { gap: gridGap }]}>
                         {SERVICE_ITEMS.map((item) => (
@@ -184,7 +184,7 @@ export default function HomeScreen() {
                     </View>
                 </View>
 
-                {/* ─── Promo Banners (Horizontal Scroll) ─── */}
+
                 <View style={styles.promoSection}>
                     <FlatList
                         data={PROMO_BANNERS}
@@ -221,7 +221,7 @@ export default function HomeScreen() {
                     />
                 </View>
 
-                {/* ─── Recent Transactions ─── */}
+
                 <View style={styles.transactionsSection}>
                     <View style={styles.transactionsHeader}>
                         <Text style={styles.transactionsTitle}>Recent Transactions</Text>
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
     },
 
-    /* ── Header ── */
+
     header: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
         borderColor: COLORS.surface,
     },
 
-    /* ── Balance Card ── */
+
     balanceCard: {
         paddingHorizontal: 20,
         paddingTop: 4,
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
         color: COLORS.primary,
     },
 
-    /* ── Quick Account Access ── */
+
     quickAccountSection: {
         paddingHorizontal: 20,
         paddingBottom: 8,
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
         color: COLORS.primary,
     },
 
-    /* ── Services Grid ── */
+
     servicesSection: {
         paddingHorizontal: 20,
         paddingTop: 20,
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
 
-    /* ── Promo Banners ── */
+
     promoSection: {
         marginTop: 20,
     },
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
 
-    /* ── Recent Transactions ── */
+
     transactionsSection: {
         paddingHorizontal: 20,
         marginTop: 24,

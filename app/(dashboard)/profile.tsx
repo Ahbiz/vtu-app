@@ -46,12 +46,12 @@ export default function ProfileScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
-                {/* ─── Header ─── */}
+
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Profile</Text>
                 </View>
 
-                {/* ─── Avatar Section ─── */}
+
                 <View style={styles.avatarSection}>
                     <View style={styles.avatarCircle}>
                         <Ionicons name="person" size={40} color={COLORS.primary} />
@@ -60,7 +60,7 @@ export default function ProfileScreen() {
                     <Text style={styles.userEmail}>{PLACEHOLDER_USER.email}</Text>
                 </View>
 
-                {/* ─── Menu Items ─── */}
+
                 <View style={styles.menuSection}>
                     {MENU_ITEMS.map((item) => (
                         <TouchableOpacity 
@@ -82,7 +82,7 @@ export default function ProfileScreen() {
                     ))}
                 </View>
 
-                {/* ─── Logout ─── */}
+
                 <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
                     <Ionicons name="log-out-outline" size={20} color={COLORS.danger} />
                     <Text style={styles.logoutText}>Log Out</Text>

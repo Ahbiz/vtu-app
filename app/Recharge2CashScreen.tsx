@@ -21,8 +21,8 @@ export default function Recharge2CashScreen() {
 
     if (!fontsLoaded) return null;
 
-    // Calculate receivable amount dynamically
-    const conversionRate = 0.8; // 80%
+
+    const conversionRate = 0.8;
     const numericAmount = parseFloat(amount) || 0;
     const receivable = (numericAmount * conversionRate).toFixed(2);
 

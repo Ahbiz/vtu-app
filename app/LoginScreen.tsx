@@ -28,7 +28,7 @@ export default function LoginScreen() {
             return;
         }
 
-        router.replace("/(tabs)");
+        router.replace("/(dashboard)" as any);
     };
 
     return <BottomSheetModalProvider>
@@ -42,7 +42,7 @@ export default function LoginScreen() {
             <View style={styles.fieldWrapper}>
                 <Text style={styles.label}>Email Address</Text>
                 <TextInput style={styles.input}
-                    placeholder="Jimmygrammy@gmail.com"
+                    placeholder="Ahbiz123@gmail.com"
                     placeholderTextColor="#AAAAAA"
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -55,7 +55,7 @@ export default function LoginScreen() {
                 <View style={styles.passwordInputRow}>
                     <TextInput
                         style={[styles.input, { flex: 1 }]}
-                        placeholder="Enter New Password"
+                        placeholder="Enter your password"
                         placeholderTextColor="#AAAAAA"
                         secureTextEntry={!showPassword}
                         value={password}

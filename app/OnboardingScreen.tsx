@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { COLORS } from "@/constants/app-data";
 const { width } = Dimensions.get("window");
 
 export default function OnboardingScreen() {
@@ -31,7 +32,7 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#4444FF",
+    backgroundColor: COLORS.primaryDark,
     flex: 1,
     justifyContent: "space-between",
     paddingBottom: 50,
@@ -59,7 +60,7 @@ const styles = StyleSheet.create({
   letterInBox: {
     fontSize: 32,
     fontWeight: "800",
-    color: "#6366FF",
+    color: COLORS.primary,
   },
   logoText: {
     fontSize: 40,
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
     width: width * 0.85,
   },
   regbtn: {
-    color: "#6366FF",
+    color: COLORS.primary,
     textAlign: "center",
     fontSize: 16,
     fontWeight: "600",

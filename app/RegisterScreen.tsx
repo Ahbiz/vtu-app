@@ -86,7 +86,7 @@ export default function RegisterScreen() {
                         <Text style={styles.label}>Full name</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Jimmy Grammy"
+                            placeholder="Ahbiz"
                             placeholderTextColor="#AAAAAA"
                             value={fullName}
                             onChangeText={setFullName}
@@ -97,7 +97,7 @@ export default function RegisterScreen() {
                         <Text style={styles.label}>Email</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Jimmygrammy@gmail.com"
+                            placeholder="Ahbiz123@gmail.com"
                             placeholderTextColor="#AAAAAA"
                             keyboardType="email-address"
                             autoCapitalize="none"

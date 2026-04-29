@@ -40,7 +40,7 @@ export default function EnterEmailScreen() {
                         style={styles.input}
                         value={email}
                         onChangeText={setEmail}
-                        placeholder="e.g. Jimmygrammy@gmail.com"
+                        placeholder="e.g. Ahbiz123@gmail.com"
                         placeholderTextColor="#AAAAAA"
                         keyboardType="email-address"
                         autoCapitalize="none"

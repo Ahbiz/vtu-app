@@ -26,7 +26,7 @@ export default function VerifyAccountScreen() {
             return;
         }
         console.log('Verify this code:', otp);
-        router.push('/(tabs)');
+        router.replace('/(dashboard)' as any);
     };
 
     return (

@@ -12,6 +12,7 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useFonts, Poppins_600SemiBold } from "@expo-google-fonts/poppins";
 import { useState, useRef, useCallback } from "react";
+import { COLORS } from "@/constants/app-data";
 
 
 const { width } = Dimensions.get("window");
@@ -127,7 +128,7 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#4444FF",
+    backgroundColor: COLORS.primaryDark,
     flex: 1,
   },
   page: {
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_600SemiBold",
     fontSize: 26,
     fontWeight: "600",
-    color: "#1A1A2E",
+    color: "#FFFFFF",
     letterSpacing: 0.4,
     lineHeight: 36,
     paddingHorizontal: 32,
@@ -184,7 +185,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   button: {
-    backgroundColor: "#1A1A2E",
+    backgroundColor: COLORS.dark,
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: "center",

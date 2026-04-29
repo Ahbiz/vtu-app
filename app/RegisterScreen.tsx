@@ -5,7 +5,7 @@ import CountryPicker, { Country } from "react-native-country-picker-modal";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-export default function RegisterPage() {
+export default function RegisterScreen() {
     const router = useRouter()
     const [showPassword, setShowPassword] = useState(false);
     const [countryCode, setCountryCode] = useState<any>("NG");
@@ -63,7 +63,7 @@ export default function RegisterPage() {
 
 
         const fullPhoneNumber = `+${callingCode} ${phoneNumber}`;
-        router.push({ pathname: "/OtpPage", params: { phoneNumber: fullPhoneNumber } });
+        router.push({ pathname: "/VerifyAccountScreen", params: { phoneNumber: fullPhoneNumber } });
     };
 
     return (

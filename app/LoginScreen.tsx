@@ -1,11 +1,11 @@
 import { useState, useRef } from "react"
-import { View, StyleSheet, Text, TextInput, TouchableOpacity } from "react-native"
+import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { BottomSheetModalProvider, BottomSheetModal } from '@gorhom/bottom-sheet';
-import ForgotPasswordSheet from './ForgotPassword';
-export default function LoggingPage() {
+import ForgotPasswordSheet from './ForgotPasswordSheet';
+export default function LoginScreen() {
     const router = useRouter()
     const [email, setEmail] = useState("")
     const [showPassword, setShowPassword] = useState(false);
@@ -13,7 +13,22 @@ export default function LoggingPage() {
     const bottomSheetRef = useRef<BottomSheetModal>(null)
 
     const handleForgotPassword = () => {
-        bottomSheetRef.current?.present(); 
+        bottomSheetRef.current?.present();
+    };
+
+    const handleLogin = () => {
+        if (!email.trim() || !password) {
+            Alert.alert("Error", "Please enter both email and password.");
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email.trim())) {
+            Alert.alert("Error", "Please enter a valid email address.");
+            return;
+        }
+
+        router.replace("/(tabs)");
     };
 
     return <BottomSheetModalProvider>
@@ -56,13 +71,13 @@ export default function LoggingPage() {
                 </View>
             </View>
             <View>
-                <TouchableOpacity style={styles.button}>
+                <TouchableOpacity style={styles.button} onPress={handleLogin}>
                     <Text style={styles.buttontext}>Login</Text>
                 </TouchableOpacity>
             </View>
             <View style={styles.footerLinks}>
                 <Text style={styles.forgotPassword} onPress={handleForgotPassword}>Forgot password?</Text>
-                <Text style={styles.signUpText}>New User? <Text style={styles.linkText} onPress={() => router.push("/RegisterPage")}>Create Account</Text></Text>
+                <Text style={styles.signUpText}>New User? <Text style={styles.linkText} onPress={() => router.push("/RegisterScreen")}>Create Account</Text></Text>
             </View>
 
         </SafeAreaView>

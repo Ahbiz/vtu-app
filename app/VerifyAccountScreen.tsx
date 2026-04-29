@@ -6,7 +6,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTimer } from 'react-timer-hook'
 import { OtpInput } from "react-native-otp-entry"
 
-export default function OtpPage() {
+
+export default function VerifyAccountScreen() {
     const router = useRouter()
     const { phoneNumber } = useLocalSearchParams()
     const phone = Array.isArray(phoneNumber) ? phoneNumber[0] : phoneNumber;
@@ -36,7 +37,7 @@ export default function OtpPage() {
             >
                 <View style={styles.content}>
                     <View style={styles.headerRow}>
-                        <Pressable onPress={() => router.push("/RegisterPage")}>
+                        <Pressable onPress={() => router.push("/RegisterScreen")}>
                             <Ionicons name="arrow-back" size={24} color="#4F6EF7" />
                         </Pressable>
                         <Text style={styles.headerText}>OTP Verification</Text>

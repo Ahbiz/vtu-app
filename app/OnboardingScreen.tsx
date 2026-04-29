@@ -3,7 +3,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 const { width } = Dimensions.get("window");
 
-export default function Onboarding() {
+export default function OnboardingScreen() {
   const router = useRouter()
   return (
     <SafeAreaView style={styles.container}>
@@ -18,10 +18,10 @@ export default function Onboarding() {
       </View>
 
       <View style={styles.btns}>
-        <TouchableOpacity style={styles.logbtncon} onPress={() => router.push("/LoggingPage")}>
+        <TouchableOpacity style={styles.logbtncon} onPress={() => router.push("/LoginScreen")}>
           <Text style={styles.logbtn}>Login</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.regbtncon} onPress={() => router.push("/RegisterPage")}>
+        <TouchableOpacity style={styles.regbtncon} onPress={() => router.push("/RegisterScreen")}>
           <Text style={styles.regbtn}>Register</Text>
         </TouchableOpacity>
       </View>

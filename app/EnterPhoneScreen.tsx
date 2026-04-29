@@ -50,7 +50,7 @@ export default function EnterPhoneScreen() {
         }
 
         const fullPhoneNumber = `+${callingCode} ${phoneNumber}`;
-        router.push({ pathname: "/SmsReset", params: { phoneNumber: fullPhoneNumber } });
+        router.push({ pathname: "/ResetOtpScreen", params: { phoneNumber: fullPhoneNumber } });
     };
 
     return (

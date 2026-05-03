@@ -8,27 +8,23 @@ if (!JWT_SECRET) {
   throw new Error("JWT_SECRET is not defined in the environment variables");
 }
 
-// Extend Express Request interface to include our user object
 export interface AuthRequest extends Request {
   user?: any;
 }
 
+/**
+ * Middleware to protect routes and verify JWT tokens
+ */
 export const protect = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   let token;
 
-  // Check if the authorization header exists and starts with 'Bearer'
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
-      // Get token from header (Bearer <token>)
       token = req.headers.authorization.split(' ')[1];
-
-      // Verify token
       const decoded: any = jwt.verify(token, JWT_SECRET);
 
-      // Get user from the token's ID (exclude the password from the result)
       req.user = await User.findById(decoded.id).select('-password');
-
-      next(); // Move to the next middleware or route handler
+      next();
     } catch (error) {
       console.error(error);
       res.status(401).json({ message: 'Not authorized, token failed' });

@@ -1,5 +1,8 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+/**
+ * Transaction Interface for Mongoose Model
+ */
 export interface ITransaction extends Document {
   user: mongoose.Types.ObjectId;
   reference: string;
@@ -14,6 +17,9 @@ export interface ITransaction extends Document {
   updatedAt: Date;
 }
 
+/**
+ * Mongoose Schema for Financial Transactions
+ */
 const TransactionSchema: Schema = new Schema(
   {
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },

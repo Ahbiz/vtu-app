@@ -8,13 +8,16 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Connect to database
+// Initialize Database Connection
 connectDB();
 
+// Middleware
 app.use(express.json());
 
+// API Routes
 app.use('/api/auth', authRoutes);
 
+// Health Check Endpoint
 app.get('/', (req, res) => {
   res.send('Server is running!');
 });

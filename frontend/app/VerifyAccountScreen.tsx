@@ -6,7 +6,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTimer } from 'react-timer-hook'
 import { OtpInput } from "react-native-otp-entry"
 
-
 export default function VerifyAccountScreen() {
     const router = useRouter()
     const { email } = useLocalSearchParams();
@@ -15,7 +14,9 @@ export default function VerifyAccountScreen() {
     expiryTime.setSeconds(expiryTime.getSeconds() + 180)
     const { seconds, minutes, isRunning } = useTimer({ expiryTimestamp: expiryTime });
 
-    // Function to mask email: a****z@gmail.com
+    /**
+     * Masks the email address for security (e.g., a****z@gmail.com)
+     */
     const maskEmail = (str: string) => {
         if (!str) return '';
         const [name, domain] = str.split('@');
@@ -26,6 +27,7 @@ export default function VerifyAccountScreen() {
     const maskedEmail = maskEmail(emailStr as string);
 
     const [otp, setOtp] = useState('');
+    
     const handleVerify = () => {
         if (otp.length !== 4) {
             Alert.alert("Validation Error", "Please enter a complete 4-digit OTP.");

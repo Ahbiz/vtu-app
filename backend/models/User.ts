@@ -1,5 +1,8 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+/**
+ * User Interface for Mongoose Model
+ */
 export interface IUser extends Document {
   firstName: string;
   lastName: string;
@@ -19,6 +22,9 @@ export interface IUser extends Document {
   updatedAt: Date;
 }
 
+/**
+ * Mongoose Schema for User Profiles
+ */
 const UserSchema: Schema = new Schema(
   {
     firstName: { type: String, required: true },

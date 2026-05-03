@@ -1,23 +1,26 @@
 import nodemailer from 'nodemailer';
 
+/**
+ * Generates a random 4-digit OTP
+ */
 export const generateOTP = (): string => {
-  // Generates a random 4 digit number
   return Math.floor(1000 + Math.random() * 9000).toString();
 };
 
+/**
+ * Sends an OTP to the specified email address
+ * @param email - Recipient email address
+ * @param otp - OTP code to send
+ */
 export const sendOTP = async (email: string, otp: string) => {
-  // 1. Configure the email transporter
-  // For production, you can use Gmail, SendGrid, or any SMTP service.
-  // Make sure to put these credentials in your .env file!
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER || 'your-email@gmail.com',
-      pass: process.env.EMAIL_PASS || 'your-email-password', // Note: use Gmail App Passwords
+      pass: process.env.EMAIL_PASS || 'your-email-password',
     },
   });
 
-  // 2. Define the email content
   const mailOptions = {
     from: '"AhbizPay Support" <support@ahbizpay.com>',
     to: email,
@@ -35,11 +38,9 @@ export const sendOTP = async (email: string, otp: string) => {
   };
 
   try {
-    // 3. Send the email
-    // In production, uncomment the line below to actually send real emails!
+    // In production, uncomment the line below to send real emails
     // await transporter.sendMail(mailOptions); 
     
-    // For development, we simulate the email by printing it to the console
     console.log(`[SIMULATED EMAIL] Sending OTP ${otp} to email address ${email}`);
     return true;
   } catch (error) {

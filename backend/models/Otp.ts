@@ -22,6 +22,7 @@ const OtpSchema: Schema = new Schema(
   { timestamps: true },
 );
 
+// TTL index to automatically delete expired OTP records
 OtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export default mongoose.model<IOtp>("Otp", OtpSchema);

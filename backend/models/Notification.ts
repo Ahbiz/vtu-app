@@ -1,5 +1,8 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+/**
+ * Notification Interface for Mongoose Model
+ */
 export interface INotification extends Document {
   user: mongoose.Types.ObjectId;
   title: string;
@@ -9,6 +12,9 @@ export interface INotification extends Document {
   updatedAt: Date;
 }
 
+/**
+ * Mongoose Schema for In-App Notifications
+ */
 const NotificationSchema: Schema = new Schema(
   {
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },

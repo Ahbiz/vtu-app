@@ -9,15 +9,21 @@ import { OtpInput } from "react-native-otp-entry"
 
 export default function VerifyAccountScreen() {
     const router = useRouter()
-    const { phoneNumber } = useLocalSearchParams()
-    const phone = Array.isArray(phoneNumber) ? phoneNumber[0] : phoneNumber;
+    const { email } = useLocalSearchParams();
+    const emailStr = Array.isArray(email) ? email[0] : email;
     const expiryTime = new Date()
     expiryTime.setSeconds(expiryTime.getSeconds() + 180)
     const { seconds, minutes, isRunning } = useTimer({ expiryTimestamp: expiryTime });
 
-    const maskedNumber = phone
-        ? phone.slice(0, -3).replace(/\d/g, '*') + phone.slice(-3)
-        : '';
+    // Function to mask email: a****z@gmail.com
+    const maskEmail = (str: string) => {
+        if (!str) return '';
+        const [name, domain] = str.split('@');
+        if (!domain) return str;
+        return `${name[0]}****${name[name.length - 1]}@${domain}`;
+    };
+    
+    const maskedEmail = maskEmail(emailStr as string);
 
     const [otp, setOtp] = useState('');
     const handleVerify = () => {
@@ -51,7 +57,7 @@ export default function VerifyAccountScreen() {
 
                     <View style={styles.infoContainer}>
                         <Text style={styles.infoText}>
-                            Code was sent to {maskedNumber}
+                            Code was sent to {maskedEmail}
                         </Text>
                         <Text style={styles.infoText}>
                             This code will expire in <Text style={styles.timerText}>{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}</Text>

@@ -62,8 +62,7 @@ export default function RegisterScreen() {
         }
 
 
-        const fullPhoneNumber = `+${callingCode} ${phoneNumber}`;
-        router.push({ pathname: "/VerifyAccountScreen", params: { phoneNumber: fullPhoneNumber } });
+        router.push({ pathname: "/VerifyAccountScreen", params: { email: email.trim() } });
     };
 
     return (

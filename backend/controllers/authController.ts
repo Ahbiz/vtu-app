@@ -45,11 +45,11 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
       expiresAt,
     });
 
-    // 6. Send OTP
-    await sendOTP(phone, otpCode);
+    // 6. Send OTP via Email
+    await sendOTP(email, otpCode);
 
     res.status(201).json({
-      message: 'Registration successful. Please verify your account with the OTP sent.',
+      message: 'Registration successful. Please verify your account with the OTP sent to your email.',
       userId: user._id,
     });
   } catch (error: any) {
@@ -61,10 +61,10 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
 // @route   POST /api/auth/verify-otp
 export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { phone, otp } = req.body;
+    const { email, otp } = req.body;
 
-    // 1. Find the user by phone
-    const user = await User.findOne({ phone });
+    // 1. Find the user by email
+    const user = await User.findOne({ email });
     if (!user) {
       res.status(404).json({ message: 'User not found' });
       return;

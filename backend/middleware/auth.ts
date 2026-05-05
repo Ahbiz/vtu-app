@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 
@@ -23,7 +23,8 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
       token = req.headers.authorization.split(' ')[1];
       const decoded: any = jwt.verify(token, JWT_SECRET);
 
-      req.user = await User.findById(decoded.id).select('-password');
+      // Exclude both password and transactionPin from the attached user object
+      req.user = await User.findById(decoded.id).select('-password -transactionPin');
       next();
     } catch (error) {
       console.error(error);

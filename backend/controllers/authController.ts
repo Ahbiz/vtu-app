@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-import User from '../models/User';
+import { Request, Response } from 'express';
 import Otp from '../models/Otp';
-import { generateOTP, sendOTP } from '../utils/otpUtils';
+import User from '../models/User';
 import { generateToken } from '../utils/jwt';
+import { generateOTP, sendOTP } from '../utils/otpUtils';
 
 /**
  * @desc    Register new user
@@ -68,7 +68,13 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const otpRecord = await Otp.findOne({ user: user._id, code: otp, type: 'email_verification' });
+    const otpRecord = await Otp.findOne({
+      user: user._id,
+      code: otp,
+      type: 'email_verification',
+      // Explicit expiry check — don't rely solely on the TTL index, which runs every ~60s
+      expiresAt: { $gt: new Date() },
+    });
     if (!otpRecord) {
       res.status(400).json({ message: 'Invalid or expired OTP' });
       return;
@@ -153,13 +159,15 @@ export const setPin = async (req: any, res: Response): Promise<void> => {
     const { pin } = req.body;
     const userId = req.user._id;
 
-    if (!pin || pin.length !== 4) {
-      res.status(400).json({ message: 'PIN must be 4 digits' });
+    // Coerce to string — req.body can deliver numeric values if Content-Type is mishandled
+    const pinStr = String(pin ?? '');
+    if (!pinStr || pinStr.length !== 4 || !/^\d{4}$/.test(pinStr)) {
+      res.status(400).json({ message: 'PIN must be exactly 4 digits' });
       return;
     }
 
     const salt = await bcrypt.genSalt(10);
-    const hashedPin = await bcrypt.hash(pin, salt);
+    const hashedPin = await bcrypt.hash(pinStr, salt);
 
     await User.findByIdAndUpdate(userId, { transactionPin: hashedPin });
 

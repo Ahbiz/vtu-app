@@ -1,17 +1,9 @@
 import nodemailer from 'nodemailer';
 
-/**
- * Generates a random 4-digit OTP
- */
 export const generateOTP = (): string => {
   return Math.floor(1000 + Math.random() * 9000).toString();
 };
 
-/**
- * Sends an OTP to the specified email address
- * @param email - Recipient email address
- * @param otp - OTP code to send
- */
 export const sendOTP = async (email: string, otp: string) => {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -38,10 +30,9 @@ export const sendOTP = async (email: string, otp: string) => {
   };
 
   try {
-    // In production, uncomment the line below to send real emails
-    // await transporter.sendMail(mailOptions); 
-    
-    console.log(`[SIMULATED EMAIL] Sending OTP ${otp} to email address ${email}`);
+    // TODO: remove simulation and uncomment sendMail before going to production
+    // await transporter.sendMail(mailOptions);
+    console.log(`[SIMULATED EMAIL] OTP ${otp} → ${email}`);
     return true;
   } catch (error) {
     console.error('Error sending email:', error);

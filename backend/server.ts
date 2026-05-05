@@ -1,5 +1,5 @@
-import express from 'express';
 import dotenv from 'dotenv';
+import express from 'express';
 import connectDB from './config/db';
 import authRoutes from './routes/authRoutes';
 import paystackRoutes from './routes/paystackRoutes';
@@ -9,24 +9,20 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Initialize Database Connection
 connectDB();
 
-// Middleware
-// [WHAT] - We configure express.json to save a copy of the "raw" body.
-// [WHY] - Paystack webhooks need the exact, untouched text to verify the signature.
+// rawBody is required by the Paystack webhook handler for HMAC-SHA512 signature verification.
+// Re-stringifying req.body can alter whitespace and break the signature check.
 app.use(express.json({
-  verify: (req: any, res, buf) => {
+  verify: (req: any, _res, buf) => {
     req.rawBody = buf;
-  }
+  },
 }));
 
-// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/paystack', paystackRoutes);
 
-// Health Check Endpoint
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.send('Server is running!');
 });
 

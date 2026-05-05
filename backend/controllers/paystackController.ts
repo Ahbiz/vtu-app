@@ -42,7 +42,7 @@ export const initialize = async (req: AuthRequest, res: Response) => {
  * Verifies a transaction after the client reports success.
  * The actual wallet credit happens via webhook; this endpoint is for UI confirmation only.
  */
-export const verify = async (req: AuthRequest, res: Response) => {
+export const verify = async (req: AuthRequest & { params: { reference: string } }, res: Response) => {
   try {
     const { reference } = req.params;
 

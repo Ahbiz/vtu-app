@@ -1,10 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from "react"
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useTimer } from 'react-timer-hook'
-import { OtpInput } from "react-native-otp-entry"
+import { useState } from "react";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { OtpInput } from "react-native-otp-entry";
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTimer } from 'react-timer-hook';
 
 export default function VerifyAccountScreen() {
     const router = useRouter()
@@ -27,14 +27,30 @@ export default function VerifyAccountScreen() {
     const maskedEmail = maskEmail(emailStr as string);
 
     const [otp, setOtp] = useState('');
-    
-    const handleVerify = () => {
+    const [loading, setLoading] = useState(false);
+
+    const handleVerify = async () => {
         if (otp.length !== 4) {
             Alert.alert("Validation Error", "Please enter a complete 4-digit OTP.");
             return;
         }
-        console.log('Verify this code:', otp);
-        router.replace('/(dashboard)' as any);
+
+        try {
+            setLoading(true);
+            const response = await apiClient.post('/auth/verify-otp', {
+                email: emailStr,
+                otp,
+            });
+
+            const { token } = response.data;
+            setAuthToken(token);
+            router.replace('/(dashboard)' as any);
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Verification failed. Please try again.';
+            Alert.alert("Error", message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -95,8 +111,12 @@ export default function VerifyAccountScreen() {
                 </View>
 
                 <View style={styles.bottomContainer}>
-                    <TouchableOpacity style={styles.verifyButton} onPress={handleVerify}>
-                        <Text style={styles.verifyButtonText}>Verify and Create Account</Text>
+                    <TouchableOpacity style={styles.verifyButton} onPress={handleVerify} disabled={loading}>
+                        {loading ? (
+                            <ActivityIndicator color="white" />
+                        ) : (
+                            <Text style={styles.verifyButtonText}>Verify and Create Account</Text>
+                        )}
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>

@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useState } from "react";
-import CountryPicker, { Country } from "react-native-country-picker-modal";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useState } from "react";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import CountryPicker, { Country } from "react-native-country-picker-modal";
+import { SafeAreaView } from "react-native-safe-area-context";
+import apiClient from '../utils/api';
 
 export default function RegisterScreen() {
     const router = useRouter()
@@ -15,6 +16,7 @@ export default function RegisterScreen() {
     const [email, setEmail] = useState("");
     const [phoneNumber, setPhoneNumber] = useState("");
     const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const onSelectCountry = (country: Country) => {
         setCountryCode(country.cca2);
@@ -47,13 +49,11 @@ export default function RegisterScreen() {
         setPhoneNumber(formatPhoneNumber(text));
     };
 
-    const handleContinue = () => {
-
+    const handleContinue = async () => {
         if (!fullName.trim() || !email.trim() || !phoneNumber.trim() || !password.trim()) {
             Alert.alert("Error", "Please fill in all fields before proceeding.");
             return;
         }
-
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email.trim())) {
@@ -61,8 +61,31 @@ export default function RegisterScreen() {
             return;
         }
 
+        const nameParts = fullName.trim().split(' ');
+        const firstName = nameParts[0];
+        const lastName = nameParts.slice(1).join(' ') || nameParts[0];
+        const rawPhone = phoneNumber.replace(/\s/g, '');
+        const phone = rawPhone.startsWith('0')
+            ? `+${callingCode}${rawPhone.slice(1)}`
+            : `+${callingCode}${rawPhone}`;
 
-        router.push({ pathname: "/VerifyAccountScreen", params: { email: email.trim() } });
+        try {
+            setLoading(true);
+            await apiClient.post('/auth/register', {
+                firstName,
+                lastName,
+                email: email.trim(),
+                phone,
+                password,
+            });
+
+            router.push({ pathname: "/VerifyAccountScreen", params: { email: email.trim() } });
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Registration failed. Please try again.';
+            Alert.alert("Error", message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -156,8 +179,12 @@ export default function RegisterScreen() {
                             </TouchableOpacity>
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.button} onPress={handleContinue}>
-                        <Text style={styles.buttontext}>Continue</Text>
+                    <TouchableOpacity style={styles.button} onPress={handleContinue} disabled={loading}>
+                        {loading ? (
+                            <ActivityIndicator color="white" />
+                        ) : (
+                            <Text style={styles.buttontext}>Continue</Text>
+                        )}
                     </TouchableOpacity>
                 </ScrollView>
             </KeyboardAvoidingView>

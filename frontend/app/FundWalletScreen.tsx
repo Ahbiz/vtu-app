@@ -1,6 +1,5 @@
 import DropdownModal from "@/components/DropdownModal";
 import PaymentButton from "@/components/PaymentButton";
-import apiClient from "@/utils/api";
 import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, useFonts } from "@expo-google-fonts/poppins";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -19,21 +18,6 @@ export default function FundWalletScreen() {
     const FUNDING_METHODS = ["Bank Transfer", "Card Payment", "USSD"];
 
     if (!fontsLoaded) return null;
-
-    // Derive the user email from the stored token payload for PaymentButton.
-    // In a full implementation this would come from a global auth context/store.
-    // For now we read it from the apiClient Authorization header as a fallback.
-    const getEmailFromToken = (): string => {
-        try {
-            const authHeader = apiClient.defaults.headers.common['Authorization'] as string;
-            if (!authHeader) return '';
-            const token = authHeader.replace('Bearer ', '');
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            return payload.email || '';
-        } catch {
-            return '';
-        }
-    };
 
     const parsedAmount = parseFloat(amount);
     const isAmountValid = !isNaN(parsedAmount) && parsedAmount > 0;
@@ -107,7 +91,7 @@ export default function FundWalletScreen() {
                 {method === "Card Payment" && isAmountValid ? (
                     <PaymentButton
                         amount={parsedAmount}
-                        email={getEmailFromToken()}
+                        email={getUserEmail()}
                         onSuccess={(reference) => {
                             Alert.alert(
                                 "Payment Received",

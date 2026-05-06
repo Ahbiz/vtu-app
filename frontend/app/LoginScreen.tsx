@@ -38,8 +38,8 @@ export default function LoginScreen() {
                 password,
             });
 
-            const { token } = response.data;
-            setAuthToken(token);
+            const { token, user } = response.data;
+            setAuthToken(token, user.email);
             router.replace("/(dashboard)" as any);
         } catch (error: any) {
             const message = error.response?.data?.message || 'Login failed. Please try again.';

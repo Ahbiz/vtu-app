@@ -43,8 +43,8 @@ export default function VerifyAccountScreen() {
                 otp,
             });
 
-            const { token } = response.data;
-            setAuthToken(token);
+            const { token, user } = response.data;
+            setAuthToken(token, user.email);
             router.replace('/(dashboard)' as any);
         } catch (error: any) {
             const message = error.response?.data?.message || 'Verification failed. Please try again.';

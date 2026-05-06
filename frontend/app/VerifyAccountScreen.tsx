@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { OtpInput } from "react-native-otp-entry";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTimer } from 'react-timer-hook';
+import apiClient, { setAuthToken } from '../utils/api';
 
 export default function VerifyAccountScreen() {
     const router = useRouter()

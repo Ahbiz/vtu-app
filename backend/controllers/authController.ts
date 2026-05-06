@@ -4,7 +4,6 @@ import Otp from '../models/Otp';
 import User from '../models/User';
 import { generateToken } from '../utils/jwt';
 import { generateOTP, sendOTP } from '../utils/otpUtils';
-
 /**
  * @desc    Register new user
  * @route   POST /api/auth/register
@@ -174,6 +173,91 @@ export const setPin = async (req: any, res: Response): Promise<void> => {
     await User.findByIdAndUpdate(userId, { transactionPin: hashedPin });
 
     res.status(200).json({ message: 'Transaction PIN set successfully' });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+/**
+ * @desc    Request password reset OTP
+ * @route   POST /api/auth/forgot-password
+ * @access  Public
+ */
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ message: 'Email is required' });
+      return;
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    // Always return 200 to avoid leaking whether an email is registered
+    if (!user) {
+      res.status(200).json({ message: 'If that email is registered, a reset code has been sent.' });
+      return;
+    }
+
+    const otpCode = generateOTP();
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+    await Otp.deleteOne({ user: user._id, type: 'password_reset' });
+    await Otp.create({
+      user: user._id,
+      code: otpCode,
+      type: 'password_reset',
+      expiresAt,
+    });
+
+    await sendOTP(email, otpCode);
+
+    res.status(200).json({ message: 'If that email is registered, a reset code has been sent.' });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+/**
+ * @desc    Reset password using OTP
+ * @route   POST /api/auth/reset-password
+ * @access  Public
+ */
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      res.status(400).json({ message: 'Email, OTP, and new password are required' });
+      return;
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    const otpRecord = await Otp.findOne({
+      user: user._id,
+      code: otp,
+      type: 'password_reset',
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!otpRecord) {
+      res.status(400).json({ message: 'Invalid or expired reset code' });
+      return;
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    await Otp.deleteOne({ _id: otpRecord._id });
+
+    res.status(200).json({ message: 'Password reset successfully' });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

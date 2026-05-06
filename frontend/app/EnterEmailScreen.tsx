@@ -1,20 +1,32 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useState } from "react";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import apiClient from "../utils/api";
 
 export default function EnterEmailScreen() {
     const router = useRouter();
     const [email, setEmail] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    const handleSendCode = () => {
+    const handleSendCode = async () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!email.trim() || !emailRegex.test(email.trim())) {
             Alert.alert("Error", "Please enter a valid email address.");
             return;
         }
-        router.push({ pathname: "/ResetOtpScreen", params: { phoneNumber: email.trim() } });
+
+        try {
+            setLoading(true);
+            await apiClient.post('/auth/forgot-password', { email: email.trim() });
+            router.push({ pathname: "/ResetOtpScreen", params: { contact: email.trim(), type: 'email' } });
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Failed to send reset code. Please try again.';
+            Alert.alert("Error", message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -48,8 +60,12 @@ export default function EnterEmailScreen() {
                     />
                 </View>
 
-                <TouchableOpacity style={styles.button} onPress={handleSendCode}>
-                    <Text style={styles.buttontext}>Send Code</Text>
+                <TouchableOpacity style={styles.button} onPress={handleSendCode} disabled={loading}>
+                    {loading ? (
+                        <ActivityIndicator color="white" />
+                    ) : (
+                        <Text style={styles.buttontext}>Send Code</Text>
+                    )}
                 </TouchableOpacity>
 
             </KeyboardAvoidingView>
@@ -58,67 +74,15 @@ export default function EnterEmailScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        backgroundColor: "white",
-        flex: 1,
-    },
-    header: {
-        paddingHorizontal: 20,
-        paddingTop: 10,
-        marginBottom: 20,
-    },
-    backButton: {
-        width: 40,
-        height: 40,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#F5F5F5",
-        borderRadius: 20,
-    },
-    titleContainer: {
-        paddingHorizontal: 27,
-        marginBottom: 30,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: "700",
-        color: "#111111",
-        marginBottom: 10,
-    },
-    subtitle: {
-        fontSize: 15,
-        color: "#666666",
-        lineHeight: 22,
-    },
-    fieldWrapper: {
-        marginTop: 20,
-        marginHorizontal: 27,
-    },
-    label: {
-        color: "#AAAAAA",
-        fontSize: 13,
-        marginBottom: 5,
-    },
-    input: {
-        fontSize: 16,
-        fontWeight: "500",
-        color: "#111111",
-        borderBottomWidth: 1,
-        borderBottomColor: "#E0E0E0",
-        paddingVertical: 6,
-    },
-    buttontext: {
-        fontFamily: "Poppins_600SemiBold",
-        fontSize: 16,
-        fontWeight: "600",
-        color: "white",
-    },
-    button: {
-        backgroundColor: "#6366FF",
-        paddingVertical: 16,
-        borderRadius: 20,
-        alignItems: "center",
-        marginHorizontal: 25,
-        marginTop: 50
-    }
+    container: { backgroundColor: "white", flex: 1 },
+    header: { paddingHorizontal: 20, paddingTop: 10, marginBottom: 20 },
+    backButton: { width: 40, height: 40, justifyContent: "center", alignItems: "center", backgroundColor: "#F5F5F5", borderRadius: 20 },
+    titleContainer: { paddingHorizontal: 27, marginBottom: 30 },
+    title: { fontSize: 28, fontWeight: "700", color: "#111111", marginBottom: 10 },
+    subtitle: { fontSize: 15, color: "#666666", lineHeight: 22 },
+    fieldWrapper: { marginTop: 20, marginHorizontal: 27 },
+    label: { color: "#AAAAAA", fontSize: 13, marginBottom: 5 },
+    input: { fontSize: 16, fontWeight: "500", color: "#111111", borderBottomWidth: 1, borderBottomColor: "#E0E0E0", paddingVertical: 6 },
+    buttontext: { fontFamily: "Poppins_600SemiBold", fontSize: 16, fontWeight: "600", color: "white" },
+    button: { backgroundColor: "#6366FF", paddingVertical: 16, borderRadius: 20, alignItems: "center", marginHorizontal: 25, marginTop: 50 },
 });

@@ -128,7 +128,7 @@ export const webhook = async (req: RawBodyRequest, res: Response) => {
           newBalance,
           description: `Wallet funded via Paystack`,
         },
-        { upsert: true, new: true },
+        { upsert: true, returnDocument: 'after' },
       );
 
       console.log(`[Webhook] Wallet credited: ${customer.email} +₦${amountInNaira} (ref: ${reference})`);

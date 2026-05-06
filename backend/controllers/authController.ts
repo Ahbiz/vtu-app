@@ -35,12 +35,14 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
-    // Replace any existing OTP for this user+type to avoid stale records
-    await Otp.findOneAndUpdate(
-      { user: user._id, type: 'email_verification' },
-      { code: otpCode, expiresAt },
-      { upsert: true, new: true },
-    );
+    // Delete any existing OTP for this user before creating a fresh one
+    await Otp.deleteOne({ user: user._id, type: 'email_verification' });
+    await Otp.create({
+      user: user._id,
+      code: otpCode,
+      type: 'email_verification',
+      expiresAt,
+    });
 
     await sendOTP(email, otpCode);
 

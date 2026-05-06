@@ -1,22 +1,25 @@
-import { useState, useRef } from "react"
-import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons";
+import { BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useRouter } from "expo-router";
-import { BottomSheetModalProvider, BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useRef, useState } from "react";
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import apiClient, { setAuthToken } from '../utils/api';
 import ForgotPasswordSheet from './ForgotPasswordSheet';
+
 export default function LoginScreen() {
     const router = useRouter()
     const [email, setEmail] = useState("")
     const [showPassword, setShowPassword] = useState(false);
     const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
     const bottomSheetRef = useRef<BottomSheetModal>(null)
 
     const handleForgotPassword = () => {
         bottomSheetRef.current?.present();
     };
 
-    const handleLogin = () => {
+    const handleLogin = async () => {
         if (!email.trim() || !password) {
             Alert.alert("Error", "Please enter both email and password.");
             return;
@@ -28,7 +31,22 @@ export default function LoginScreen() {
             return;
         }
 
-        router.replace("/(dashboard)" as any);
+        try {
+            setLoading(true);
+            const response = await apiClient.post('/auth/login', {
+                email: email.trim(),
+                password,
+            });
+
+            const { token } = response.data;
+            setAuthToken(token);
+            router.replace("/(dashboard)" as any);
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Login failed. Please try again.';
+            Alert.alert("Error", message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return <BottomSheetModalProvider>
@@ -71,8 +89,12 @@ export default function LoginScreen() {
                 </View>
             </View>
             <View>
-                <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                    <Text style={styles.buttontext}>Login</Text>
+                <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+                    {loading ? (
+                        <ActivityIndicator color="white" />
+                    ) : (
+                        <Text style={styles.buttontext}>Login</Text>
+                    )}
                 </TouchableOpacity>
             </View>
             <View style={styles.footerLinks}>

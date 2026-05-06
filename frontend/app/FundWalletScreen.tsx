@@ -1,10 +1,12 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Platform, TextInput } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import DropdownModal from "@/components/DropdownModal";
+import PaymentButton from "@/components/PaymentButton";
+import apiClient from "@/utils/api";
+import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, useFonts } from "@expo-google-fonts/poppins";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { useFonts, Poppins_600SemiBold, Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
-import DropdownModal from "@/components/DropdownModal";
+import { Alert, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function FundWalletScreen() {
     const router = useRouter();
@@ -17,6 +19,43 @@ export default function FundWalletScreen() {
     const FUNDING_METHODS = ["Bank Transfer", "Card Payment", "USSD"];
 
     if (!fontsLoaded) return null;
+
+    // Derive the user email from the stored token payload for PaymentButton.
+    // In a full implementation this would come from a global auth context/store.
+    // For now we read it from the apiClient Authorization header as a fallback.
+    const getEmailFromToken = (): string => {
+        try {
+            const authHeader = apiClient.defaults.headers.common['Authorization'] as string;
+            if (!authHeader) return '';
+            const token = authHeader.replace('Bearer ', '');
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.email || '';
+        } catch {
+            return '';
+        }
+    };
+
+    const parsedAmount = parseFloat(amount);
+    const isAmountValid = !isNaN(parsedAmount) && parsedAmount > 0;
+
+    const handleProceed = () => {
+        if (!method) {
+            Alert.alert("Error", "Please select a funding method.");
+            return;
+        }
+        if (!isAmountValid) {
+            Alert.alert("Error", "Please enter a valid amount.");
+            return;
+        }
+        if (method === "Bank Transfer") {
+            Alert.alert(
+                "Bank Transfer",
+                "Transfer to your dedicated virtual account shown on the Wallet page. Your balance updates automatically once received."
+            );
+        } else if (method === "USSD") {
+            Alert.alert("USSD", "USSD payment coming soon.");
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -31,8 +70,8 @@ export default function FundWalletScreen() {
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 <Text style={styles.label}>Select Funding Method</Text>
-                <TouchableOpacity 
-                    style={styles.inputContainer} 
+                <TouchableOpacity
+                    style={styles.inputContainer}
                     activeOpacity={0.7}
                     onPress={() => setMethodModalVisible(true)}
                 >
@@ -44,11 +83,11 @@ export default function FundWalletScreen() {
 
                 <Text style={styles.label}>Amount</Text>
                 <View style={styles.inputContainer}>
-                    <TextInput 
-                        style={styles.input} 
-                        placeholder="0.00" 
-                        placeholderTextColor="#A0ABC0" 
-                        keyboardType="numeric" 
+                    <TextInput
+                        style={styles.input}
+                        placeholder="0.00"
+                        placeholderTextColor="#A0ABC0"
+                        keyboardType="numeric"
                         value={amount}
                         onChangeText={setAmount}
                     />
@@ -57,18 +96,35 @@ export default function FundWalletScreen() {
                 {method === "Bank Transfer" && (
                     <View style={styles.infoBox}>
                         <Ionicons name="information-circle" size={24} color="#0052CC" />
-                        <Text style={styles.infoText}>You can also fund your wallet by transferring to any of your dedicated virtual accounts on the Wallet page.</Text>
+                        <Text style={styles.infoText}>
+                            Transfer to your dedicated virtual account on the Wallet page. Your balance updates automatically.
+                        </Text>
                     </View>
                 )}
             </ScrollView>
 
             <View style={styles.bottomContainer}>
-                <TouchableOpacity style={styles.payBtn}>
-                    <Text style={styles.payBtnText}>Proceed</Text>
-                </TouchableOpacity>
+                {method === "Card Payment" && isAmountValid ? (
+                    <PaymentButton
+                        amount={parsedAmount}
+                        email={getEmailFromToken()}
+                        onSuccess={(reference) => {
+                            Alert.alert(
+                                "Payment Received",
+                                `Reference: ${reference}\nYour wallet will be credited shortly.`,
+                                [{ text: "OK", onPress: () => router.back() }]
+                            );
+                        }}
+                        onCancel={() => Alert.alert("Cancelled", "Payment was cancelled.")}
+                    />
+                ) : (
+                    <TouchableOpacity style={styles.payBtn} onPress={handleProceed}>
+                        <Text style={styles.payBtnText}>Proceed</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
-            <DropdownModal 
+            <DropdownModal
                 visible={isMethodModalVisible}
                 title="Funding Method"
                 options={FUNDING_METHODS}

@@ -4,7 +4,6 @@ import crypto from 'crypto';
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
 if (!PAYSTACK_SECRET_KEY) {
-  // Fail loudly at startup rather than silently at runtime
   throw new Error('CRITICAL: PAYSTACK_SECRET_KEY is missing from environment variables');
 }
 
@@ -18,16 +17,16 @@ const paystackAxios = axios.create({
 
 /**
  * Generates a unique transaction reference.
- * Using a server-side reference (rather than letting Paystack auto-generate one) is required
- * for idempotency checks — see: https://paystack.com/docs/payments/verify-payments/
+ * Server-side reference required for idempotency — prevents double-fulfillment.
+ * https://paystack.com/docs/payments/verify-payments/
  */
 export const generateReference = (): string => {
   return `TXN-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 };
 
 /**
- * Initializes a Paystack transaction and returns the access_code and reference.
- * Amount must be in Naira; this function converts to kobo before sending.
+ * Initializes a Paystack transaction.
+ * Amount in Naira — converted to kobo (×100) before sending to Paystack.
  * https://paystack.com/docs/api/transaction/#initialize
  */
 export const initializeTransaction = async (
@@ -38,10 +37,9 @@ export const initializeTransaction = async (
   try {
     const response = await paystackAxios.post('/transaction/initialize', {
       email,
-      amount: amount * 100, // Paystack requires kobo (1 NGN = 100 kobo)
+      amount: amount * 100,
       reference,
     });
-
     return response.data.data;
   } catch (error: any) {
     const message = error.response?.data?.message || error.message;
@@ -65,46 +63,33 @@ export const verifyTransaction = async (reference: string) => {
 };
 
 /**
- * Creates a Paystack customer record.
- * Required before assigning a Dedicated Virtual Account.
- * https://paystack.com/docs/api/customer/#create
+ * Single-step DVA assignment per the Paystack docs.
+ * Creates a Paystack customer and assigns a dedicated virtual account in one call.
+ * Uses 'test-bank' in test mode — switch to 'wema-bank' or 'titan-paystack' in production.
+ *
+ * The result is asynchronous: Paystack fires dedicatedaccount.assign.success or
+ * dedicatedaccount.assign.failed webhooks when the account is ready.
+ *
+ * https://paystack.com/docs/payments/dedicated-virtual-accounts/#single-step-account-assignment
  */
-export const createPaystackCustomer = async (
-  email: string,
-  firstName: string,
-  lastName: string,
-  phone: string,
-): Promise<{ customer_code: string; id: number }> => {
+export const assignDedicatedVirtualAccountSingleStep = async (params: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+}): Promise<void> => {
   try {
-    const response = await paystackAxios.post('/customer', {
-      email,
-      first_name: firstName,
-      last_name: lastName,
-      phone,
+    await paystackAxios.post('/dedicated_account/assign', {
+      email: params.email,
+      first_name: params.firstName,
+      last_name: params.lastName,
+      phone: params.phone,
+      preferred_bank: 'test-bank',
+      country: 'NG',
     });
-    return response.data.data;
+    // 202 Accepted — Paystack processes asynchronously and fires webhook on completion
   } catch (error: any) {
     const message = error.response?.data?.message || error.message;
-    throw new Error(`Paystack create customer failed: ${message}`);
-  }
-};
-
-/**
- * Assigns a Dedicated Virtual Account to an existing Paystack customer.
- * Uses 'test-bank' in test mode; switch to a real provider slug in production.
- * https://paystack.com/docs/payments/dedicated-virtual-accounts/
- */
-export const assignDedicatedVirtualAccount = async (
-  customerCode: string,
-): Promise<{ account_number: string; account_name: string; bank: { name: string } }> => {
-  try {
-    const response = await paystackAxios.post('/dedicated_account', {
-      customer: customerCode,
-      preferred_bank: 'test-bank', // use 'wema-bank' or 'titan-paystack' in production
-    });
-    return response.data.data;
-  } catch (error: any) {
-    const message = error.response?.data?.message || error.message;
-    throw new Error(`Paystack assign DVA failed: ${message}`);
+    throw new Error(`Paystack DVA assign failed: ${message}`);
   }
 };

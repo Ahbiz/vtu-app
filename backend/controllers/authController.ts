@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import Otp from '../models/Otp';
 import User from '../models/User';
-import { assignDedicatedVirtualAccount, createPaystackCustomer } from '../services/paystackService';
+import { assignDedicatedVirtualAccountSingleStep } from '../services/paystackService';
 import { generateToken } from '../utils/jwt';
 import { generateOTP, sendOTP } from '../utils/otpUtils';
 /**
@@ -93,27 +93,19 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
 
     await Otp.deleteOne({ _id: otpRecord._id });
 
-    // Create Paystack customer and assign a dedicated virtual account.
-    // Done asynchronously after verification — failure doesn't block login.
+    // Trigger single-step DVA assignment per Paystack docs.
+    // This is asynchronous — Paystack fires dedicatedaccount.assign.success webhook
+    // when the account is ready, which saves it to the user record.
     try {
-      const customer = await createPaystackCustomer(
-        user.email,
-        user.firstName,
-        user.lastName,
-        user.phone,
-      );
-      const dva = await assignDedicatedVirtualAccount(customer.customer_code);
-      await User.findByIdAndUpdate(user._id, {
-        virtualAccount: {
-          accountNumber: dva.account_number,
-          accountName: dva.account_name,
-          bankName: dva.bank.name,
-          customerCode: customer.customer_code,
-        },
+      await assignDedicatedVirtualAccountSingleStep({
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
       });
+      console.log(`[DVA] Assignment initiated for ${user.email} — awaiting webhook confirmation`);
     } catch (dvaError: any) {
-      // Log but don't fail — user is verified, DVA can be retried later
-      console.error('[DVA] Failed to assign virtual account:', dvaError.message);
+      console.error('[DVA] Failed to initiate virtual account assignment:', dvaError.message);
     }
 
     const token = generateToken(user._id as any);

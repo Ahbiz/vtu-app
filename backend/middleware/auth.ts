@@ -23,8 +23,9 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
       token = req.headers.authorization.split(' ')[1];
       const decoded: any = jwt.verify(token, JWT_SECRET);
 
-      // Exclude both password and transactionPin from the attached user object
-      req.user = await User.findById(decoded.id).select('-password -transactionPin');
+      // Exclude password from the attached user object.
+      // transactionPin is kept so the verifyPin middleware can validate it server-side.
+      req.user = await User.findById(decoded.id).select('-password');
       next();
     } catch (error) {
       console.error(error);

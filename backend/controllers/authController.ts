@@ -62,6 +62,63 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
 };
 
 /**
+ * @desc    Resend OTP for email verification
+ * @route   POST /api/auth/resend-otp
+ * @access  Public
+ */
+export const resendOtp = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ message: 'Email is required' });
+      return;
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    if (user.isVerified) {
+      res.status(400).json({ message: 'Account is already verified' });
+      return;
+    }
+
+    // Rate limit: prevent spamming — check if last OTP was sent less than 60s ago
+    const existingOtp = await Otp.findOne({ user: user._id, type: 'email_verification' });
+    if (existingOtp) {
+      const secondsSinceCreation = (Date.now() - existingOtp.createdAt.getTime()) / 1000;
+      if (secondsSinceCreation < 60) {
+        res.status(429).json({ message: 'Please wait before requesting another OTP' });
+        return;
+      }
+    }
+
+    // Delete old OTP and create a fresh one
+    await Otp.deleteMany({ user: user._id, type: 'email_verification' });
+
+    const otpCode = generateOTP();
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+    await Otp.create({
+      user: user._id,
+      code: otpCode,
+      type: 'email_verification',
+      expiresAt,
+    });
+
+    await sendOTP(email, otpCode);
+
+    res.status(200).json({ message: 'OTP resent successfully' });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+/**
  * @desc    Verify OTP
  * @route   POST /api/auth/verify-otp
  * @access  Public

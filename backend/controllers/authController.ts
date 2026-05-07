@@ -21,6 +21,11 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
+    if (!firstName?.trim() || !lastName?.trim()) {
+      res.status(400).json({ message: 'Both first name and last name are required' });
+      return;
+    }
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 

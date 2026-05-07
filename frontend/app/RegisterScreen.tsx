@@ -61,9 +61,14 @@ export default function RegisterScreen() {
             return;
         }
 
-        const nameParts = fullName.trim().split(' ');
+        const nameParts = fullName.trim().split(/\s+/);
+        if (nameParts.length < 2) {
+            Alert.alert("Validation Error", "Please enter your full name (first and last name).");
+            return;
+        }
+
         const firstName = nameParts[0];
-        const lastName = nameParts.slice(1).join(' ') || nameParts[0];
+        const lastName = nameParts.slice(1).join(' ');
         const rawPhone = phoneNumber.replace(/\s/g, '');
         const phone = rawPhone.startsWith('0')
             ? `+${callingCode}${rawPhone.slice(1)}`
@@ -108,7 +113,7 @@ export default function RegisterScreen() {
                         <Text style={styles.label}>Full name</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Ahbiz"
+                            placeholder="e.g. Ahbiz Mohammed"
                             placeholderTextColor="#AAAAAA"
                             value={fullName}
                             onChangeText={setFullName}

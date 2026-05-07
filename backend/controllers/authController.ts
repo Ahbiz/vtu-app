@@ -1,7 +1,9 @@
 import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
+import { AuthRequest } from '../middleware/auth';
 import Otp from '../models/Otp';
 import User from '../models/User';
+import { assignDedicatedVirtualAccount, createPaystackCustomer } from '../services/paystackService';
 import { generateToken } from '../utils/jwt';
 import { generateOTP, sendOTP } from '../utils/otpUtils';
 /**
@@ -86,6 +88,29 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
 
     await Otp.deleteOne({ _id: otpRecord._id });
 
+    // Create Paystack customer and assign a dedicated virtual account.
+    // Done asynchronously after verification — failure doesn't block login.
+    try {
+      const customer = await createPaystackCustomer(
+        user.email,
+        user.firstName,
+        user.lastName,
+        user.phone,
+      );
+      const dva = await assignDedicatedVirtualAccount(customer.customer_code);
+      await User.findByIdAndUpdate(user._id, {
+        virtualAccount: {
+          accountNumber: dva.account_number,
+          accountName: dva.account_name,
+          bankName: dva.bank.name,
+          customerCode: customer.customer_code,
+        },
+      });
+    } catch (dvaError: any) {
+      // Log but don't fail — user is verified, DVA can be retried later
+      console.error('[DVA] Failed to assign virtual account:', dvaError.message);
+    }
+
     const token = generateToken(user._id as any);
 
     res.status(200).json({
@@ -98,6 +123,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
         email: user.email,
         phone: user.phone,
         walletBalance: user.walletBalance,
+        virtualAccount: user.virtualAccount,
       },
     });
   } catch (error: any) {
@@ -143,6 +169,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
         email: user.email,
         phone: user.phone,
         walletBalance: user.walletBalance,
+        virtualAccount: user.virtualAccount,
       },
     });
   } catch (error: any) {
@@ -258,6 +285,32 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     await Otp.deleteOne({ _id: otpRecord._id });
 
     res.status(200).json({ message: 'Password reset successfully' });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+/**
+ * @desc    Get current authenticated user profile
+ * @route   GET /api/auth/me
+ * @access  Private
+ */
+export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const user = await User.findById(req.user._id).select('-password -transactionPin');
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+    res.status(200).json({
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+      walletBalance: user.walletBalance,
+      virtualAccount: user.virtualAccount,
+    });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

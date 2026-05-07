@@ -1,33 +1,43 @@
-import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    Platform,
-    Alert,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { COLORS } from "@/constants/app-data";
+import apiClient from "@/utils/api";
+import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, useFonts } from "@expo-google-fonts/poppins";
 import { Ionicons } from "@expo/vector-icons";
-import { useFonts, Poppins_600SemiBold, Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
-import { useState } from "react";
-import { useRouter } from "expo-router";
-import {
-    COLORS,
-    VIRTUAL_ACCOUNTS,
-    PLACEHOLDER_BALANCE,
-} from "@/constants/app-data";
 import * as Clipboard from "expo-clipboard";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+interface VirtualAccount {
+    accountNumber: string;
+    accountName: string;
+    bankName: string;
+}
 
 export default function WalletScreen() {
     const router = useRouter();
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [virtualAccount, setVirtualAccount] = useState<VirtualAccount | null>(null);
+    const [walletBalance, setWalletBalance] = useState<number>(0);
     const [fontsLoaded] = useFonts({
         Poppins_600SemiBold,
         Poppins_400Regular,
         Poppins_500Medium,
         Poppins_700Bold,
     });
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const response = await apiClient.get('/auth/me');
+                setVirtualAccount(response.data.virtualAccount || null);
+                setWalletBalance(response.data.walletBalance || 0);
+            } catch (error) {
+                console.error('Failed to fetch user profile:', error);
+            }
+        };
+        fetchProfile();
+    }, []);
 
     if (!fontsLoaded) return null;
 
@@ -47,7 +57,6 @@ export default function WalletScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
-
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Wallet</Text>
                     <TouchableOpacity style={styles.headerMenuBtn}>
@@ -55,20 +64,25 @@ export default function WalletScreen() {
                     </TouchableOpacity>
                 </View>
 
+                <View style={styles.balanceSection}>
+                    <Text style={styles.balanceLabel}>Wallet Balance</Text>
+                    <Text style={styles.balanceAmount}>₦{walletBalance.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</Text>
+                </View>
 
                 <View style={styles.sectionWrapper}>
-                    <Text style={styles.sectionTitle}>Virtual Account:</Text>
+                    <Text style={styles.sectionTitle}>Virtual Account</Text>
+                    <Text style={styles.sectionSubtitle}>Transfer to this account to fund your wallet instantly</Text>
 
-                    {VIRTUAL_ACCOUNTS.map((account) => (
-                        <View key={account.id} style={styles.accountCard}>
+                    {virtualAccount ? (
+                        <View style={styles.accountCard}>
                             <View style={styles.accountCardTop}>
-                                <Text style={styles.accountNumber}>{account.accountNumber}</Text>
+                                <Text style={styles.accountNumber}>{virtualAccount.accountNumber}</Text>
                                 <TouchableOpacity
                                     style={styles.accountCopyBtn}
-                                    onPress={() => handleCopyAccount(account.accountNumber, account.id)}
+                                    onPress={() => handleCopyAccount(virtualAccount.accountNumber, 'dva')}
                                 >
                                     <Ionicons
-                                        name={copiedId === account.id ? "checkmark-circle" : "copy-outline"}
+                                        name={copiedId === 'dva' ? "checkmark-circle" : "copy-outline"}
                                         size={20}
                                         color="rgba(255,255,255,0.8)"
                                     />
@@ -76,17 +90,22 @@ export default function WalletScreen() {
                             </View>
                             <View style={styles.accountCardBottom}>
                                 <View>
-                                    <Text style={styles.accountBank}>{account.bankName}</Text>
-                                    <Text style={styles.accountName}>{account.accountName}</Text>
+                                    <Text style={styles.accountBank}>{virtualAccount.bankName}</Text>
+                                    <Text style={styles.accountName}>{virtualAccount.accountName}</Text>
                                 </View>
                                 <View style={styles.chargeBadge}>
-                                    <Text style={styles.chargeText}>{account.charge}</Text>
+                                    <Text style={styles.chargeText}>Instant</Text>
                                 </View>
                             </View>
                         </View>
-                    ))}
+                    ) : (
+                        <View style={styles.noAccountCard}>
+                            <Ionicons name="card-outline" size={32} color={COLORS.textMuted} />
+                            <Text style={styles.noAccountText}>Virtual account not yet assigned</Text>
+                            <Text style={styles.noAccountSubtext}>This is set up automatically after registration. Please try logging out and back in.</Text>
+                        </View>
+                    )}
                 </View>
-
 
                 <View style={styles.actionsSection}>
                     <Text style={styles.sectionTitleSmall}>Quick Actions</Text>
@@ -112,7 +131,6 @@ export default function WalletScreen() {
                     </View>
                 </View>
 
-
                 <View style={styles.transactionsSection}>
                     <Text style={styles.sectionTitleSmall}>Transaction History</Text>
                     <View style={styles.emptyState}>
@@ -131,177 +149,38 @@ export default function WalletScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    scrollContent: {
-        paddingBottom: 20,
-    },
-
-
-    header: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 16,
-        backgroundColor: COLORS.surface,
-    },
-    headerTitle: {
-        fontSize: 24,
-        fontFamily: "Poppins_700Bold",
-        fontWeight: "700",
-        color: COLORS.text,
-    },
-    headerMenuBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: COLORS.surfaceSecondary,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-
-
-    sectionWrapper: {
-        paddingHorizontal: 20,
-        paddingTop: 20,
-    },
-    sectionTitle: {
-        fontSize: 22,
-        fontFamily: "Poppins_700Bold",
-        fontWeight: "700",
-        color: COLORS.text,
-        marginBottom: 16,
-    },
-    accountCard: {
-        backgroundColor: COLORS.cardDarkStart,
-        borderRadius: 18,
-        padding: 20,
-        marginBottom: 14,
-    },
-    accountCardTop: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 14,
-    },
-    accountNumber: {
-        fontSize: 22,
-        fontFamily: "Poppins_700Bold",
-        fontWeight: "700",
-        color: "#FFFFFF",
-        letterSpacing: 1,
-    },
-    accountCopyBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        backgroundColor: "rgba(255,255,255,0.12)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    accountCardBottom: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "flex-end",
-    },
-    accountBank: {
-        fontSize: 16,
-        fontFamily: "Poppins_600SemiBold",
-        fontWeight: "600",
-        color: "rgba(255,255,255,0.9)",
-        marginBottom: 2,
-    },
-    accountName: {
-        fontSize: 14,
-        fontFamily: "Poppins_400Regular",
-        color: "rgba(255,255,255,0.6)",
-    },
-    chargeBadge: {
-        backgroundColor: "rgba(255,255,255,0.12)",
-        paddingHorizontal: 14,
-        paddingVertical: 6,
-        borderRadius: 10,
-    },
-    chargeText: {
-        fontSize: 16,
-        fontFamily: "Poppins_700Bold",
-        fontWeight: "700",
-        color: "rgba(255,255,255,0.9)",
-    },
-
-
-    actionsSection: {
-        paddingHorizontal: 20,
-        paddingTop: 24,
-    },
-    sectionTitleSmall: {
-        fontSize: 16,
-        fontFamily: "Poppins_600SemiBold",
-        fontWeight: "600",
-        color: COLORS.text,
-        marginBottom: 16,
-    },
-    actionsRow: {
-        flexDirection: "row",
-        justifyContent: "center",
-        gap: 28,
-    },
-    actionItem: {
-        alignItems: "center",
-        gap: 6,
-    },
-    actionIconBox: {
-        width: 56,
-        height: 56,
-        borderRadius: 18,
-        backgroundColor: COLORS.primaryLight,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    actionLabel: {
-        fontSize: 13,
-        fontFamily: "Poppins_500Medium",
-        fontWeight: "500",
-        color: COLORS.textSecondary,
-    },
-
-
-    transactionsSection: {
-        paddingHorizontal: 20,
-        marginTop: 28,
-    },
-    emptyState: {
-        alignItems: "center",
-        paddingVertical: 40,
-        backgroundColor: COLORS.surface,
-        borderRadius: 16,
-    },
-    emptyIconBox: {
-        width: 72,
-        height: 72,
-        borderRadius: 36,
-        backgroundColor: COLORS.primaryGhost,
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: 16,
-    },
-    emptyTitle: {
-        fontSize: 15,
-        fontFamily: "Poppins_600SemiBold",
-        fontWeight: "600",
-        color: COLORS.textSecondary,
-        marginBottom: 6,
-    },
-    emptySubtitle: {
-        fontSize: 13,
-        fontFamily: "Poppins_400Regular",
-        color: COLORS.textMuted,
-        textAlign: "center",
-        lineHeight: 20,
-        paddingHorizontal: 30,
-    },
+    container: { flex: 1, backgroundColor: COLORS.background },
+    scrollContent: { paddingBottom: 20 },
+    header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16, backgroundColor: COLORS.surface },
+    headerTitle: { fontSize: 24, fontFamily: "Poppins_700Bold", fontWeight: "700", color: COLORS.text },
+    headerMenuBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.surfaceSecondary, justifyContent: "center", alignItems: "center" },
+    balanceSection: { backgroundColor: COLORS.primary, marginHorizontal: 20, marginTop: 16, borderRadius: 16, padding: 20 },
+    balanceLabel: { fontSize: 13, fontFamily: "Poppins_500Medium", color: "rgba(255,255,255,0.8)", marginBottom: 6 },
+    balanceAmount: { fontSize: 28, fontFamily: "Poppins_700Bold", fontWeight: "700", color: "#FFFFFF" },
+    sectionWrapper: { paddingHorizontal: 20, paddingTop: 24 },
+    sectionTitle: { fontSize: 18, fontFamily: "Poppins_700Bold", fontWeight: "700", color: COLORS.text, marginBottom: 4 },
+    sectionSubtitle: { fontSize: 13, fontFamily: "Poppins_400Regular", color: COLORS.textMuted, marginBottom: 16 },
+    accountCard: { backgroundColor: COLORS.cardDarkStart, borderRadius: 18, padding: 20, marginBottom: 14 },
+    accountCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
+    accountNumber: { fontSize: 22, fontFamily: "Poppins_700Bold", fontWeight: "700", color: "#FFFFFF", letterSpacing: 1 },
+    accountCopyBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.12)", justifyContent: "center", alignItems: "center" },
+    accountCardBottom: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
+    accountBank: { fontSize: 16, fontFamily: "Poppins_600SemiBold", fontWeight: "600", color: "rgba(255,255,255,0.9)", marginBottom: 2 },
+    accountName: { fontSize: 14, fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.6)" },
+    chargeBadge: { backgroundColor: "rgba(255,255,255,0.12)", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10 },
+    chargeText: { fontSize: 14, fontFamily: "Poppins_600SemiBold", fontWeight: "600", color: "rgba(255,255,255,0.9)" },
+    noAccountCard: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 24, alignItems: "center", borderWidth: 1, borderColor: COLORS.border, borderStyle: "dashed" },
+    noAccountText: { fontSize: 14, fontFamily: "Poppins_600SemiBold", color: COLORS.textSecondary, marginTop: 12, marginBottom: 6 },
+    noAccountSubtext: { fontSize: 12, fontFamily: "Poppins_400Regular", color: COLORS.textMuted, textAlign: "center", lineHeight: 18 },
+    actionsSection: { paddingHorizontal: 20, paddingTop: 24 },
+    sectionTitleSmall: { fontSize: 16, fontFamily: "Poppins_600SemiBold", fontWeight: "600", color: COLORS.text, marginBottom: 16 },
+    actionsRow: { flexDirection: "row", justifyContent: "center", gap: 28 },
+    actionItem: { alignItems: "center", gap: 6 },
+    actionIconBox: { width: 56, height: 56, borderRadius: 18, backgroundColor: COLORS.primaryLight, justifyContent: "center", alignItems: "center" },
+    actionLabel: { fontSize: 13, fontFamily: "Poppins_500Medium", fontWeight: "500", color: COLORS.textSecondary },
+    transactionsSection: { paddingHorizontal: 20, marginTop: 28 },
+    emptyState: { alignItems: "center", paddingVertical: 40, backgroundColor: COLORS.surface, borderRadius: 16 },
+    emptyIconBox: { width: 72, height: 72, borderRadius: 36, backgroundColor: COLORS.primaryGhost, justifyContent: "center", alignItems: "center", marginBottom: 16 },
+    emptyTitle: { fontSize: 15, fontFamily: "Poppins_600SemiBold", fontWeight: "600", color: COLORS.textSecondary, marginBottom: 6 },
+    emptySubtitle: { fontSize: 13, fontFamily: "Poppins_400Regular", color: COLORS.textMuted, textAlign: "center", lineHeight: 20, paddingHorizontal: 30 },
 });

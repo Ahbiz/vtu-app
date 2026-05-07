@@ -63,3 +63,48 @@ export const verifyTransaction = async (reference: string) => {
     throw new Error(`Paystack verify failed: ${message}`);
   }
 };
+
+/**
+ * Creates a Paystack customer record.
+ * Required before assigning a Dedicated Virtual Account.
+ * https://paystack.com/docs/api/customer/#create
+ */
+export const createPaystackCustomer = async (
+  email: string,
+  firstName: string,
+  lastName: string,
+  phone: string,
+): Promise<{ customer_code: string; id: number }> => {
+  try {
+    const response = await paystackAxios.post('/customer', {
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      phone,
+    });
+    return response.data.data;
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    throw new Error(`Paystack create customer failed: ${message}`);
+  }
+};
+
+/**
+ * Assigns a Dedicated Virtual Account to an existing Paystack customer.
+ * Uses 'test-bank' in test mode; switch to a real provider slug in production.
+ * https://paystack.com/docs/payments/dedicated-virtual-accounts/
+ */
+export const assignDedicatedVirtualAccount = async (
+  customerCode: string,
+): Promise<{ account_number: string; account_name: string; bank: { name: string } }> => {
+  try {
+    const response = await paystackAxios.post('/dedicated_account', {
+      customer: customerCode,
+      preferred_bank: 'test-bank', // use 'wema-bank' or 'titan-paystack' in production
+    });
+    return response.data.data;
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message;
+    throw new Error(`Paystack assign DVA failed: ${message}`);
+  }
+};

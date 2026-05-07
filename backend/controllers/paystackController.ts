@@ -133,6 +133,24 @@ export const webhook = async (req: RawBodyRequest, res: Response) => {
 
       console.log(`[Webhook] Wallet credited: ${customer.email} +₦${amountInNaira} (ref: ${reference})`);
     }
+
+    // Fired when Paystack successfully assigns a dedicated virtual account to a customer.
+    // Saves the account details to the user record so the wallet screen can display them.
+    if (event.event === 'dedicatedaccount.assign.success') {
+      const { customer: eventCustomer, dedicated_account } = event.data;
+      await User.findOneAndUpdate(
+        { email: eventCustomer.email },
+        {
+          virtualAccount: {
+            accountNumber: dedicated_account.account_number,
+            accountName: dedicated_account.account_name,
+            bankName: dedicated_account.bank.name,
+            customerCode: eventCustomer.customer_code,
+          },
+        },
+      );
+      console.log(`[Webhook] DVA assigned: ${eventCustomer.email} → ${dedicated_account.account_number}`);
+    }
   } catch (error: any) {
     console.error('[Webhook] Processing error:', error.message);
   }

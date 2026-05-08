@@ -225,19 +225,26 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
     await Otp.deleteOne({ _id: otpRecord._id });
 
     // Trigger single-step DVA assignment per Paystack docs.
-    // This is asynchronous — Paystack fires dedicatedaccount.assign.success webhook
-    // when the account is ready, which saves it to the user record.
-    try {
-      await assignDedicatedVirtualAccountSingleStep({
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone,
-      });
-      console.log(`[DVA] Assignment initiated for ${user.email} — awaiting webhook confirmation`);
-    } catch (dvaError: any) {
-      // DVA failure is non-blocking — user can still use the app
-      console.error('[DVA] Failed to initiate virtual account assignment:', dvaError.message);
+    // DVA is only available for businesses that have completed the go-live process.
+    // Test keys (sk_test_*) don't have DVA access, so we skip to avoid noisy errors.
+    const paystackKey = process.env.PAYSTACK_SECRET_KEY || '';
+    const isLiveMode = paystackKey.startsWith('sk_live_');
+
+    if (isLiveMode) {
+      try {
+        await assignDedicatedVirtualAccountSingleStep({
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phone: user.phone,
+        });
+        console.log(`[DVA] Assignment initiated for ${user.email} — awaiting webhook confirmation`);
+      } catch (dvaError: any) {
+        // DVA failure is non-blocking — user can still use the app
+        console.error('[DVA] Failed to initiate virtual account assignment:', dvaError.message);
+      }
+    } else {
+      console.log(`[DVA] Skipped — DVA requires a live Paystack key (current key is test mode)`);
     }
 
     const token = generateToken(user._id as any);

@@ -12,7 +12,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { ActivityIndicator, Alert } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import apiClient from "@/utils/api";
 import { useFonts, Poppins_600SemiBold, Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import { COLORS } from "@/constants/app-data";
 import DropdownModal from "@/components/DropdownModal";
@@ -21,12 +24,28 @@ const { width } = Dimensions.get("window");
 
 export default function DataPurchaseScreen() {
     const router = useRouter();
-    const [selectedNetwork, setSelectedNetwork] = useState<string | null>("MTN");
+    const [selectedNetwork, setSelectedNetwork] = useState<string>("MTN");
     const [dataPlan, setDataPlan] = useState("");
     const [phone, setPhone] = useState("");
     const [pin, setPin] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [walletBalance, setWalletBalance] = useState<number>(0);
 
     const [isPlanModalVisible, setPlanModalVisible] = useState(false);
+
+    useFocusEffect(
+        useCallback(() => {
+            const fetchProfile = async () => {
+                try {
+                    const response = await apiClient.get('/auth/me');
+                    setWalletBalance(response.data.walletBalance || 0);
+                } catch (error) {
+                    console.error('Failed to fetch balance:', error);
+                }
+            };
+            fetchProfile();
+        }, [])
+    );
 
     const [fontsLoaded] = useFonts({
         Poppins_600SemiBold,
@@ -44,7 +63,81 @@ export default function DataPurchaseScreen() {
         { id: "9MOBILE", color: "#1E1E1E" },
     ];
 
-    const DATA_PLANS = ["1GB - 30 Days (N250)", "2GB - 30 Days (N500)", "5GB - 30 Days (N1,250)", "10GB - 30 Days (N2,500)"];
+    const NETWORK_MAP: Record<string, number> = {
+        "MTN": 1,
+        "AIRTEL": 2,
+        "GLO": 3,
+        "9MOBILE": 4
+    };
+
+    const DATA_PLANS: Record<string, { label: string, id: number, amount: number }[]> = {
+        "MTN": [
+            { label: "500MB SME - 1 Month (₦390)", id: 4, amount: 390 },
+            { label: "1GB SME - 1 Month (₦500)", id: 5, amount: 500 },
+            { label: "2GB SME - 1 Month (₦1,200)", id: 6, amount: 1200 },
+            { label: "3GB SME - 1 Month (₦1,800)", id: 7, amount: 1800 },
+            { label: "5GB SME - 1 Month (₦3,000)", id: 8, amount: 3000 },
+        ],
+        "GLO": [
+            { label: "1.5GB GIFTING - 1 Month (₦465)", id: 24, amount: 465 },
+            { label: "2.9GB GIFTING - 1 Month (₦940)", id: 25, amount: 940 },
+            { label: "4.1GB GIFTING - 1 Month (₦1,300)", id: 26, amount: 1300 },
+            { label: "5.8GB GIFTING - 1 Month (₦1,860)", id: 27, amount: 1860 },
+            { label: "10GB GIFTING - 1 Month (₦3,020)", id: 28, amount: 3020 },
+        ],
+        "9MOBILE": [
+            { label: "500MB GIFTING - 1 Month (₦450)", id: 34, amount: 450 },
+            { label: "1.1GB SME - 1 Month (₦399)", id: 29, amount: 399 },
+            { label: "1.5GB GIFTING - 1 Month (₦900)", id: 33, amount: 900 },
+            { label: "2GB SME - 1 Month (₦760)", id: 30, amount: 760 },
+        ],
+        "AIRTEL": [
+            { label: "1GB SME - 1 Month (₦500)", id: 10, amount: 500 },
+            { label: "2GB SME - 1 Month (₦1000)", id: 11, amount: 1000 },
+            { label: "5GB SME - 1 Month (₦2500)", id: 12, amount: 2500 },
+        ]
+    };
+
+    const currentPlans = DATA_PLANS[selectedNetwork] || [];
+    const currentPlanLabels = currentPlans.map(p => p.label);
+
+    const handleNetworkChange = (netId: string) => {
+        setSelectedNetwork(netId);
+        setDataPlan("");
+    };
+
+    const handlePurchase = async () => {
+        if (!selectedNetwork || !dataPlan || !phone || !pin) {
+            Alert.alert("Error", "Please fill in all fields including your PIN.");
+            return;
+        }
+
+        const selectedPlanData = currentPlans.find(p => p.label === dataPlan);
+        if (!selectedPlanData) {
+            Alert.alert("Error", "Invalid data plan selected.");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const response = await apiClient.post('/vtu/data', {
+                network: NETWORK_MAP[selectedNetwork],
+                phone: phone.trim(),
+                dataPlan: selectedPlanData.id,
+                amount: selectedPlanData.amount,
+                pin: pin.trim()
+            });
+
+            Alert.alert("Success", "Data purchase successful!", [
+                { text: "OK", onPress: () => router.back() }
+            ]);
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Data purchase failed. Please try again.';
+            Alert.alert("Error", message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -72,7 +165,7 @@ export default function DataPurchaseScreen() {
                                 { backgroundColor: net.color },
                                 selectedNetwork === net.id && styles.networkSelected
                             ]}
-                            onPress={() => setSelectedNetwork(net.id)}
+                            onPress={() => handleNetworkChange(net.id)}
                             activeOpacity={0.8}
                         >
                             {net.id === "MTN" && <View style={styles.mtnLogo}><Text style={styles.mtnText}>MTN</Text></View>}
@@ -90,7 +183,7 @@ export default function DataPurchaseScreen() {
 
                 <View style={styles.rowBetween}>
                     <Text style={styles.label}>Data Plans</Text>
-                    <Text style={styles.balanceText}>Balance: N 986</Text>
+                    <Text style={styles.balanceText}>Balance: ₦{walletBalance.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</Text>
                 </View>
                 <TouchableOpacity 
                     style={styles.inputContainerDropdown} 
@@ -140,15 +233,19 @@ export default function DataPurchaseScreen() {
             </ScrollView>
 
             <View style={styles.bottomContainer}>
-                <TouchableOpacity style={styles.payBtn}>
-                    <Text style={styles.payBtnText}>Pay</Text>
+                <TouchableOpacity style={styles.payBtn} onPress={handlePurchase} disabled={loading}>
+                    {loading ? (
+                        <ActivityIndicator color="#FFF" />
+                    ) : (
+                        <Text style={styles.payBtnText}>Pay</Text>
+                    )}
                 </TouchableOpacity>
             </View>
 
             <DropdownModal 
                 visible={isPlanModalVisible}
                 title="Select Data Plan"
-                options={DATA_PLANS}
+                options={currentPlanLabels}
                 onSelect={setDataPlan}
                 onClose={() => setPlanModalVisible(false)}
             />

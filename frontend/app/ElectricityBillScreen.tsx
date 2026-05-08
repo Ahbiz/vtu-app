@@ -1,8 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, StatusBar, Platform } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, StatusBar, Platform, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import apiClient from "@/utils/api";
 import { useFonts, Poppins_600SemiBold, Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import DropdownModal from "@/components/DropdownModal";
 
@@ -15,12 +17,77 @@ export default function ElectricityBillScreen() {
     const [meterNumber, setMeterNumber] = useState("");
     const [amount, setAmount] = useState("");
     const [phone, setPhone] = useState("");
+    const [pin, setPin] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [walletBalance, setWalletBalance] = useState<number>(0);
 
     const [isProviderModalVisible, setProviderModalVisible] = useState(false);
     const [isMeterTypeModalVisible, setMeterTypeModalVisible] = useState(false);
 
-    const PROVIDERS = ["Ikeja Electric (IKEDC)", "Eko Electric (EKEDC)", "Abuja Electric (AEDC)", "Ibadan Electric (IBEDC)", "Kano Electric (KEDCO)"];
+    useFocusEffect(
+        useCallback(() => {
+            const fetchProfile = async () => {
+                try {
+                    const response = await apiClient.get('/auth/me');
+                    setWalletBalance(response.data.walletBalance || 0);
+                } catch (error) {
+                    console.error('Failed to fetch balance:', error);
+                }
+            };
+            fetchProfile();
+        }, [])
+    );
+
+    const DISCO_MAP: Record<string, number> = {
+        "Ikeja Electric": 1,
+        "Eko Electric": 2,
+        "Kano Electric": 3,
+        "Port Harcourt Electric": 4,
+        "Jos Electric": 5,
+        "Ibadan Electric": 6,
+        "Kaduna Electric": 7,
+        "Abuja Electric": 8,
+        "Benin Electric": 9,
+        "Enugu Electric": 10,
+    };
+    const PROVIDERS = Object.keys(DISCO_MAP);
     const METER_TYPES = ["Prepaid", "Postpaid"];
+
+    const handlePurchase = async () => {
+        if (!provider || !meterType || !meterNumber || !amount || !pin) {
+            Alert.alert("Error", "Please fill in all fields including your PIN.");
+            return;
+        }
+
+        const numAmount = Number(amount);
+        if (isNaN(numAmount) || numAmount <= 0) {
+            Alert.alert("Error", "Please enter a valid amount.");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const response = await apiClient.post('/vtu/electricity', {
+                disco: DISCO_MAP[provider],
+                meterType: meterType.toLowerCase(),
+                meterNumber: meterNumber.trim(),
+                amount: numAmount,
+                pin: pin.trim()
+            });
+
+            const token = response.data?.data?.token;
+            Alert.alert(
+                "Success", 
+                `Electricity payment successful!${token ? `\n\nYour Token: ${token}` : ''}`, 
+                [{ text: "OK", onPress: () => router.back() }]
+            );
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Electricity payment failed. Please try again.';
+            Alert.alert("Error", message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     if (!fontsLoaded) return null;
 
@@ -36,7 +103,10 @@ export default function ElectricityBillScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <Text style={styles.label}>Select Provider</Text>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" }}>
+                    <Text style={styles.label}>Select Provider</Text>
+                    <Text style={{ fontSize: 13, fontFamily: "Poppins_600SemiBold", color: "#111", marginBottom: 10 }}>Balance: ₦{walletBalance.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</Text>
+                </View>
                 <TouchableOpacity 
                     style={styles.inputContainer} 
                     activeOpacity={0.7}
@@ -84,7 +154,7 @@ export default function ElectricityBillScreen() {
                     />
                 </View>
 
-                <Text style={styles.label}>Phone Number</Text>
+                <Text style={styles.label}>Phone Number (Optional)</Text>
                 <View style={styles.inputContainer}>
                     <TextInput 
                         style={styles.input} 
@@ -95,11 +165,29 @@ export default function ElectricityBillScreen() {
                         onChangeText={setPhone}
                     />
                 </View>
+
+                <Text style={styles.label}>Transaction PIN</Text>
+                <View style={[styles.inputContainer, { marginBottom: 8 }]}>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="••••"
+                        placeholderTextColor="#A0ABC0"
+                        keyboardType="number-pad"
+                        secureTextEntry
+                        maxLength={4}
+                        value={pin}
+                        onChangeText={setPin}
+                    />
+                </View>
             </ScrollView>
 
             <View style={styles.bottomContainer}>
-                <TouchableOpacity style={styles.payBtn}>
-                    <Text style={styles.payBtnText}>Verify & Pay</Text>
+                <TouchableOpacity style={styles.payBtn} onPress={handlePurchase} disabled={loading}>
+                    {loading ? (
+                        <ActivityIndicator color="#FFF" />
+                    ) : (
+                        <Text style={styles.payBtnText}>Verify & Pay</Text>
+                    )}
                 </TouchableOpacity>
             </View>
 

@@ -12,7 +12,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { ActivityIndicator, Alert } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import apiClient from "@/utils/api";
 import { useFonts, Poppins_600SemiBold, Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import { COLORS } from "@/constants/app-data";
 
@@ -31,6 +34,61 @@ export default function AirtimePurchaseScreen() {
     const [amount, setAmount] = useState("");
     const [phone, setPhone] = useState("");
     const [pin, setPin] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [walletBalance, setWalletBalance] = useState<number>(0);
+
+    useFocusEffect(
+        useCallback(() => {
+            const fetchProfile = async () => {
+                try {
+                    const response = await apiClient.get('/auth/me');
+                    setWalletBalance(response.data.walletBalance || 0);
+                } catch (error) {
+                    console.error('Failed to fetch balance:', error);
+                }
+            };
+            fetchProfile();
+        }, [])
+    );
+
+    const NETWORK_MAP: Record<string, number> = {
+        "MTN": 1,
+        "AIRTEL": 2,
+        "GLO": 3,
+        "9MOBILE": 4
+    };
+
+    const handlePurchase = async () => {
+        if (!selectedNetwork || !phone || !amount || !pin) {
+            Alert.alert("Error", "Please fill in all fields including your PIN.");
+            return;
+        }
+
+        const numAmount = Number(amount);
+        if (isNaN(numAmount) || numAmount <= 0) {
+            Alert.alert("Error", "Please enter a valid amount.");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const response = await apiClient.post('/vtu/airtime', {
+                network: NETWORK_MAP[selectedNetwork],
+                phone: phone.trim(),
+                amount: numAmount,
+                pin: pin.trim()
+            });
+
+            Alert.alert("Success", "Airtime purchase successful!", [
+                { text: "OK", onPress: () => router.back() }
+            ]);
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Airtime purchase failed. Please try again.';
+            Alert.alert("Error", message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     if (!fontsLoaded) return null;
 
@@ -83,7 +141,7 @@ export default function AirtimePurchaseScreen() {
 
                 <View style={styles.rowBetween}>
                     <Text style={styles.label}>Amount</Text>
-                    <Text style={styles.balanceText}>Balance: N 986</Text>
+                    <Text style={styles.balanceText}>Balance: ₦{walletBalance.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</Text>
                 </View>
                 <View style={styles.inputContainer}>
                     <TextInput
@@ -133,8 +191,12 @@ export default function AirtimePurchaseScreen() {
             </ScrollView>
 
             <View style={styles.bottomContainer}>
-                <TouchableOpacity style={styles.payBtn}>
-                    <Text style={styles.payBtnText}>Pay</Text>
+                <TouchableOpacity style={styles.payBtn} onPress={handlePurchase} disabled={loading}>
+                    {loading ? (
+                        <ActivityIndicator color="#FFF" />
+                    ) : (
+                        <Text style={styles.payBtnText}>Pay</Text>
+                    )}
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

@@ -1,3 +1,4 @@
+import retry from 'async-retry';
 import crypto from 'crypto';
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
@@ -125,12 +126,12 @@ export const purchaseAirtime = async (req: AuthRequest, res: Response): Promise<
     try {
       const result = await retry(
         async (bail) => {
-          const res = await quickvtuBuyAirtime({ network, phone, amount, requestId });
+          const vtuResult = await quickvtuBuyAirtime({ network, phone, amount, requestId });
           // 400-level errors from QuickVTU are not retryable (bad input, insufficient balance, etc.)
-          if (res.status !== 'success' && res.status === 'failed') {
-            bail(new Error(res.message || 'Airtime purchase failed'));
+          if (vtuResult.status !== 'success' && vtuResult.status === 'failed') {
+            bail(new Error(vtuResult.message || 'Airtime purchase failed'));
           }
-          return res;
+          return vtuResult;
         },
         { retries: 3, factor: 2, minTimeout: 1000, maxTimeout: 5000 },
       );

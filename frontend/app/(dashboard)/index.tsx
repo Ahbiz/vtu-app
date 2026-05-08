@@ -1,28 +1,27 @@
 import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    Dimensions,
-    Platform,
-    StatusBar,
-    FlatList,
-    Alert,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+    COLORS,
+    PROMO_BANNERS,
+    SERVICE_ITEMS,
+} from "@/constants/app-data";
+import apiClient from "@/utils/api";
+import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, useFonts } from "@expo-google-fonts/poppins";
 import { Ionicons } from "@expo/vector-icons";
-import { useFonts, Poppins_600SemiBold, Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
+import { useFocusEffect } from "@react-navigation/native";
+import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-    COLORS,
-    SERVICE_ITEMS,
-    PROMO_BANNERS,
-} from "@/constants/app-data";
-import * as Clipboard from "expo-clipboard";
-import apiClient from "@/utils/api";
-import { useFocusEffect } from "@react-navigation/native";
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
@@ -33,6 +32,9 @@ export default function HomeScreen() {
     const [firstName, setFirstName] = useState("");
     const [walletBalance, setWalletBalance] = useState(0);
     const [virtualAccount, setVirtualAccount] = useState<any>(null);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+    const [txLoading, setTxLoading] = useState(true);
     const [fontsLoaded] = useFonts({
         Poppins_600SemiBold,
         Poppins_400Regular,
@@ -54,7 +56,31 @@ export default function HomeScreen() {
                     console.error('Failed to fetch profile:', error);
                 }
             };
+
+            const fetchNotifications = async () => {
+                try {
+                    const response = await apiClient.get('/notifications?limit=1');
+                    setUnreadCount(response.data.unreadCount || 0);
+                } catch (error) {
+                    console.error('Failed to fetch notifications:', error);
+                }
+            };
+
+            const fetchTransactions = async () => {
+                setTxLoading(true);
+                try {
+                    const response = await apiClient.get('/wallet/transactions?limit=5');
+                    setRecentTransactions(response.data.transactions || []);
+                } catch (error) {
+                    console.error('Failed to fetch transactions:', error);
+                } finally {
+                    setTxLoading(false);
+                }
+            };
+
             fetchProfile();
+            fetchNotifications();
+            fetchTransactions();
         }, [])
     );
 
@@ -103,7 +129,7 @@ export default function HomeScreen() {
                     </View>
                     <TouchableOpacity style={styles.notificationBtn} onPress={() => router.push("/NotificationsScreen")}>
                         <Ionicons name="notifications-outline" size={24} color={COLORS.textSecondary} />
-                        <View style={styles.notifBadge} />
+                        {unreadCount > 0 && <View style={styles.notifBadge} />}
                     </TouchableOpacity>
                 </View>
 
@@ -250,16 +276,42 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    <View style={styles.emptyState}>
-                        <View style={styles.emptyIconBox}>
-                            <Ionicons name="receipt-outline" size={40} color="#C5C6FF" />
+                    {txLoading ? (
+                        <View style={[styles.emptyState, { paddingVertical: 24 }]}>
+                            <ActivityIndicator size="large" color={COLORS.primary} />
                         </View>
-                        <Text style={styles.emptyTitle}>No Transaction Yet</Text>
-                        <Text style={styles.emptySubtitle}>
-                            Looks like there's no recent activity to show here.{"\n"}
-                            Get started by making a transaction
-                        </Text>
-                    </View>
+                    ) : recentTransactions.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <View style={styles.emptyIconBox}>
+                                <Ionicons name="receipt-outline" size={40} color="#C5C6FF" />
+                            </View>
+                            <Text style={styles.emptyTitle}>No Transaction Yet</Text>
+                            <Text style={styles.emptySubtitle}>
+                                Looks like there's no recent activity to show here.{"\n"}
+                                Get started by making a transaction
+                            </Text>
+                        </View>
+                    ) : (
+                        <View style={styles.emptyState}>
+                            {recentTransactions.map((item: any) => {
+                                const isCredit = item.type === 'funding' || item.type === 'refund';
+                                return (
+                                    <View key={item._id} style={styles.txItem}>
+                                        <View style={[styles.txIconBox, { backgroundColor: isCredit ? "rgba(0,168,107,0.1)" : "rgba(255,59,48,0.1)" }]}>
+                                            <Ionicons name={isCredit ? "arrow-down" : "arrow-up"} size={18} color={isCredit ? "#00A86B" : "#FF3B30"} />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.txTitle} numberOfLines={1}>{item.description || item.type}</Text>
+                                            <Text style={styles.txDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+                                        </View>
+                                        <Text style={[styles.txAmount, { color: isCredit ? "#00A86B" : "#111" }]}>
+                                            {isCredit ? "+" : "-"}₦{item.amount.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                                        </Text>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    )}
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -567,4 +619,9 @@ const styles = StyleSheet.create({
         lineHeight: 20,
         paddingHorizontal: 20,
     },
+    txItem: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F5F5F5", width: "100%", paddingHorizontal: 16 },
+    txIconBox: { width: 40, height: 40, borderRadius: 10, justifyContent: "center", alignItems: "center", marginRight: 12 },
+    txTitle: { fontSize: 14, fontFamily: "Poppins_600SemiBold", color: "#111", textTransform: "capitalize" },
+    txDate: { fontSize: 12, fontFamily: "Poppins_400Regular", color: "#888", marginTop: 2 },
+    txAmount: { fontSize: 14, fontFamily: "Poppins_600SemiBold" },
 });

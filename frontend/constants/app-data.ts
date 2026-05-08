@@ -32,39 +32,17 @@ export const COLORS = {
     cardDarkEnd: "#2D2D6B",
 };
 
-// ─── User (placeholder) ───
+// ─── User (placeholder — only used as fallback before API loads) ───
 export const PLACEHOLDER_USER = {
-    fullName: "Ahbiz User",
-    firstName: "Ahbiz",
-    email: "Ahbiz123@gmail.com",
-    phone: "+234 800 000 0000",
-    accountName: "quickvtu_Ahb",
+    fullName: "User",
+    firstName: "there",
+    email: "",
+    phone: "",
+    accountName: "",
 };
 
-// ─── Virtual Accounts (placeholder) ───
-export const VIRTUAL_ACCOUNTS = [
-    {
-        id: "1",
-        accountNumber: "6717507107",
-        bankName: "Moniepoint",
-        accountName: "quickvtu_Ahb",
-        charge: "2%",
-    },
-    {
-        id: "2",
-        accountNumber: "6863872811",
-        bankName: "Wema",
-        accountName: "quickvtu_Ahb",
-        charge: "2%",
-    },
-    {
-        id: "3",
-        accountNumber: "5224096562",
-        bankName: "Sterling",
-        accountName: "quickvtu_Ahb",
-        charge: "2%",
-    },
-];
+// ─── Virtual Accounts — real data comes from GET /auth/me ───
+export const VIRTUAL_ACCOUNTS: never[] = [];
 
 // ─── Services ───
 export const SERVICE_ITEMS = [

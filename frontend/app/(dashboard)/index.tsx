@@ -14,16 +14,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useFonts, Poppins_600SemiBold, Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
     COLORS,
-    PLACEHOLDER_USER,
-    PLACEHOLDER_BALANCE,
-    VIRTUAL_ACCOUNTS,
     SERVICE_ITEMS,
     PROMO_BANNERS,
 } from "@/constants/app-data";
 import * as Clipboard from "expo-clipboard";
+import apiClient from "@/utils/api";
+import { useFocusEffect } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 
@@ -31,6 +30,9 @@ export default function HomeScreen() {
     const router = useRouter();
     const [balanceVisible, setBalanceVisible] = useState(true);
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [firstName, setFirstName] = useState("");
+    const [walletBalance, setWalletBalance] = useState(0);
+    const [virtualAccount, setVirtualAccount] = useState<any>(null);
     const [fontsLoaded] = useFonts({
         Poppins_600SemiBold,
         Poppins_400Regular,
@@ -38,10 +40,28 @@ export default function HomeScreen() {
         Poppins_700Bold,
     });
 
+    // Fetch user profile every time the screen gains focus
+    // (e.g., returning from FundWalletScreen after a payment)
+    useFocusEffect(
+        useCallback(() => {
+            const fetchProfile = async () => {
+                try {
+                    const response = await apiClient.get('/auth/me');
+                    setFirstName(response.data.firstName || '');
+                    setWalletBalance(response.data.walletBalance || 0);
+                    setVirtualAccount(response.data.virtualAccount || null);
+                } catch (error) {
+                    console.error('Failed to fetch profile:', error);
+                }
+            };
+            fetchProfile();
+        }, [])
+    );
+
     if (!fontsLoaded) return null;
 
 
-    const primaryAccount = VIRTUAL_ACCOUNTS[0];
+    const primaryAccount = virtualAccount;
 
 
     const gridPadding = 20;
@@ -77,7 +97,7 @@ export default function HomeScreen() {
                             <Ionicons name="person" size={22} color={COLORS.primary} />
                         </View>
                         <View style={styles.greetingContainer}>
-                            <Text style={styles.greetingName}>Hello {PLACEHOLDER_USER.firstName}</Text>
+                            <Text style={styles.greetingName}>Hello {firstName || 'there'}</Text>
                             <Text style={styles.greetingSub}>Keep enjoying discounts</Text>
                         </View>
                     </View>
@@ -108,7 +128,7 @@ export default function HomeScreen() {
                         </View>
                         <Text style={styles.balanceAmount}>
                             {balanceVisible
-                                ? `${PLACEHOLDER_BALANCE.currency} ${PLACEHOLDER_BALANCE.amount}`
+                                ? `₦${walletBalance.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`
                                 : "*** ***"}
                         </Text>
                         <TouchableOpacity style={styles.fundWalletBtn} onPress={() => router.push("/wallet")}>

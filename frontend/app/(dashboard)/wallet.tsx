@@ -4,9 +4,10 @@ import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 
 interface VirtualAccount {
     accountNumber: string;
@@ -26,18 +27,22 @@ export default function WalletScreen() {
         Poppins_700Bold,
     });
 
-    useEffect(() => {
-        const fetchProfile = async () => {
-            try {
-                const response = await apiClient.get('/auth/me');
-                setVirtualAccount(response.data.virtualAccount || null);
-                setWalletBalance(response.data.walletBalance || 0);
-            } catch (error) {
-                console.error('Failed to fetch user profile:', error);
-            }
-        };
-        fetchProfile();
-    }, []);
+    // Re-fetch profile every time this screen gains focus.
+    // This ensures the balance updates after returning from FundWalletScreen.
+    useFocusEffect(
+        useCallback(() => {
+            const fetchProfile = async () => {
+                try {
+                    const response = await apiClient.get('/auth/me');
+                    setVirtualAccount(response.data.virtualAccount || null);
+                    setWalletBalance(response.data.walletBalance || 0);
+                } catch (error) {
+                    console.error('Failed to fetch user profile:', error);
+                }
+            };
+            fetchProfile();
+        }, [])
+    );
 
     if (!fontsLoaded) return null;
 

@@ -3,7 +3,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useFonts, Poppins_600SemiBold, Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import { useRouter } from "expo-router";
-import { COLORS, PLACEHOLDER_USER } from "@/constants/app-data";
+import { useCallback, useState } from "react";
+import { COLORS } from "@/constants/app-data";
+import apiClient, { setAuthToken } from "@/utils/api";
+import { useFocusEffect } from "@react-navigation/native";
 
 const MENU_ITEMS = [
     { id: "1", icon: "person-outline" as const, label: "Edit Profile", route: "/EditProfileScreen", chevron: true },
@@ -16,12 +19,31 @@ const MENU_ITEMS = [
 
 export default function ProfileScreen() {
     const router = useRouter();
+    const [fullName, setFullName] = useState("");
+    const [email, setEmail] = useState("");
     const [fontsLoaded] = useFonts({
         Poppins_600SemiBold,
         Poppins_400Regular,
         Poppins_500Medium,
         Poppins_700Bold,
     });
+
+    // Fetch real user profile from the API on screen focus
+    useFocusEffect(
+        useCallback(() => {
+            const fetchProfile = async () => {
+                try {
+                    const response = await apiClient.get('/auth/me');
+                    const { firstName, lastName, email: userEmail } = response.data;
+                    setFullName(`${firstName || ''} ${lastName || ''}`.trim());
+                    setEmail(userEmail || '');
+                } catch (error) {
+                    console.error('Failed to fetch profile:', error);
+                }
+            };
+            fetchProfile();
+        }, [])
+    );
 
     if (!fontsLoaded) return null;
 
@@ -34,7 +56,11 @@ export default function ProfileScreen() {
                 {
                     text: "Log Out",
                     style: "destructive",
-                    onPress: () => router.replace("/LoginScreen" as any),
+                    onPress: () => {
+                        // Clear the JWT token and in-memory email
+                        setAuthToken(null);
+                        router.replace("/LoginScreen" as any);
+                    },
                 },
             ]
         );
@@ -56,8 +82,8 @@ export default function ProfileScreen() {
                     <View style={styles.avatarCircle}>
                         <Ionicons name="person" size={40} color={COLORS.primary} />
                     </View>
-                    <Text style={styles.userName}>{PLACEHOLDER_USER.fullName}</Text>
-                    <Text style={styles.userEmail}>{PLACEHOLDER_USER.email}</Text>
+                    <Text style={styles.userName}>{fullName || 'User'}</Text>
+                    <Text style={styles.userEmail}>{email || ''}</Text>
                 </View>
 
 

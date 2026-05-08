@@ -1,11 +1,74 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, StatusBar } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { COLORS } from "@/constants/app-data";
+import apiClient from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { COLORS, PLACEHOLDER_USER } from "@/constants/app-data";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
+/**
+ * EditProfileScreen — allows authenticated users to update their profile.
+ * Calls PUT /api/auth/profile with { firstName, lastName, phone }.
+ * Email is read-only (cannot be changed per business rules).
+ */
 export default function EditProfileScreen() {
     const router = useRouter();
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [fetching, setFetching] = useState(true);
+
+    // Pre-fill form with current profile data
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const response = await apiClient.get('/auth/me');
+                setFirstName(response.data.firstName || '');
+                setLastName(response.data.lastName || '');
+                setEmail(response.data.email || '');
+                setPhone(response.data.phone || '');
+            } catch (error) {
+                console.error('Failed to fetch profile:', error);
+            } finally {
+                setFetching(false);
+            }
+        };
+        fetchProfile();
+    }, []);
+
+    const handleSave = async () => {
+        if (!firstName.trim() || !lastName.trim()) {
+            Alert.alert("Error", "First name and last name are required.");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await apiClient.put('/auth/profile', {
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+                phone: phone.trim(),
+            });
+            Alert.alert("Success", "Profile updated successfully.", [
+                { text: "OK", onPress: () => router.back() },
+            ]);
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Failed to update profile.';
+            Alert.alert("Error", message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (fetching) {
+        return (
+            <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -22,29 +85,58 @@ export default function EditProfileScreen() {
                 <View style={styles.avatarSection}>
                     <View style={styles.avatarCircle}>
                         <Ionicons name="person" size={40} color={COLORS.primary} />
-                        <TouchableOpacity style={styles.editAvatarBtn}>
-                            <Ionicons name="camera" size={16} color="#FFF" />
-                        </TouchableOpacity>
                     </View>
                 </View>
 
-                <Text style={styles.label}>Full Name</Text>
+                <Text style={styles.label}>First Name</Text>
                 <View style={styles.inputContainer}>
-                    <TextInput style={styles.input} defaultValue={PLACEHOLDER_USER.fullName} />
+                    <TextInput 
+                        style={styles.input} 
+                        value={firstName} 
+                        onChangeText={setFirstName}
+                        placeholder="First name"
+                        placeholderTextColor="#A0ABC0"
+                    />
+                </View>
+
+                <Text style={styles.label}>Last Name</Text>
+                <View style={styles.inputContainer}>
+                    <TextInput 
+                        style={styles.input} 
+                        value={lastName} 
+                        onChangeText={setLastName}
+                        placeholder="Last name"
+                        placeholderTextColor="#A0ABC0"
+                    />
                 </View>
 
                 <Text style={styles.label}>Email Address</Text>
-                <View style={styles.inputContainer}>
-                    <TextInput style={styles.input} defaultValue={PLACEHOLDER_USER.email} keyboardType="email-address" />
+                <View style={[styles.inputContainer, { backgroundColor: '#EFEFEF' }]}>
+                    <TextInput 
+                        style={[styles.input, { color: '#999' }]} 
+                        value={email} 
+                        editable={false}
+                    />
                 </View>
 
                 <Text style={styles.label}>Phone Number</Text>
                 <View style={styles.inputContainer}>
-                    <TextInput style={styles.input} defaultValue={PLACEHOLDER_USER.phone} keyboardType="phone-pad" />
+                    <TextInput 
+                        style={styles.input} 
+                        value={phone} 
+                        onChangeText={setPhone}
+                        keyboardType="phone-pad"
+                        placeholder="Phone number"
+                        placeholderTextColor="#A0ABC0"
+                    />
                 </View>
 
-                <TouchableOpacity style={styles.saveBtn} onPress={() => router.back()}>
-                    <Text style={styles.saveBtnText}>Save Changes</Text>
+                <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading}>
+                    {loading ? (
+                        <ActivityIndicator color="#FFF" />
+                    ) : (
+                        <Text style={styles.saveBtnText}>Save Changes</Text>
+                    )}
                 </TouchableOpacity>
             </ScrollView>
         </SafeAreaView>
@@ -59,7 +151,6 @@ const styles = StyleSheet.create({
     content: { padding: 20 },
     avatarSection: { alignItems: "center", marginBottom: 30 },
     avatarCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.primaryLight, justifyContent: "center", alignItems: "center" },
-    editAvatarBtn: { position: "absolute", bottom: 0, right: 0, backgroundColor: COLORS.primary, width: 32, height: 32, borderRadius: 16, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: "#FFF" },
     label: { fontSize: 14, fontFamily: "Poppins_500Medium", color: "#444", marginBottom: 8 },
     inputContainer: { backgroundColor: "#F5F5F5", borderRadius: 12, paddingHorizontal: 16, height: 56, justifyContent: "center", marginBottom: 20 },
     input: { flex: 1, fontSize: 14, fontFamily: "Poppins_500Medium", color: "#111" },

@@ -12,8 +12,8 @@ export default function VerifyAccountScreen() {
     const { email } = useLocalSearchParams();
     const emailStr = Array.isArray(email) ? email[0] : email;
     const expiryTime = new Date()
-    expiryTime.setSeconds(expiryTime.getSeconds() + 180)
-    const { seconds, minutes, isRunning } = useTimer({ expiryTimestamp: expiryTime });
+    expiryTime.setSeconds(expiryTime.getSeconds() + 60)
+    const { seconds, minutes, isRunning, restart } = useTimer({ expiryTimestamp: expiryTime });
 
     /**
      * Masks the email address for security (e.g., a****z@gmail.com)
@@ -29,6 +29,29 @@ export default function VerifyAccountScreen() {
 
     const [otp, setOtp] = useState('');
     const [loading, setLoading] = useState(false);
+    const [resending, setResending] = useState(false);
+
+    /**
+     * Calls POST /api/auth/resend-otp to send a fresh OTP.
+     * Rate-limited server-side to once per 60s.
+     */
+    const handleResend = async () => {
+        if (isRunning || resending) return;
+        try {
+            setResending(true);
+            await apiClient.post('/auth/resend-otp', { email: emailStr });
+            Alert.alert('OTP Sent', 'A new OTP has been sent to your email.');
+            // Restart the countdown timer
+            const newTime = new Date();
+            newTime.setSeconds(newTime.getSeconds() + 60);
+            restart(newTime);
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Could not resend OTP. Please try again.';
+            Alert.alert('Error', message);
+        } finally {
+            setResending(false);
+        }
+    };
 
     const handleVerify = async () => {
         if (otp.length !== 4) {
@@ -99,14 +122,20 @@ export default function VerifyAccountScreen() {
 
                     <View style={styles.resendRow}>
                         <Text style={styles.resendPrompt}>Didn't receive an OTP?</Text>
-                        <Pressable style={styles.resendButton}>
+                        <Pressable 
+                            style={styles.resendButton} 
+                            onPress={handleResend}
+                            disabled={isRunning || resending}
+                        >
                             <Ionicons
                                 name="refresh-outline"
                                 size={18}
-                                color="#4F6EF7"
+                                color={isRunning ? '#AAA' : '#4F6EF7'}
                                 style={{ transform: [{ scaleX: -1 }] }}
                             />
-                            <Text style={styles.resendText}>Resend</Text>
+                            <Text style={[styles.resendText, isRunning && { color: '#AAA' }]}>
+                                {resending ? 'Sending...' : isRunning ? `Resend in ${minutes}:${seconds.toString().padStart(2, '0')}` : 'Resend'}
+                            </Text>
                         </Pressable>
                     </View>
                 </View>

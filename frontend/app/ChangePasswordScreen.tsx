@@ -1,14 +1,56 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, StatusBar } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { COLORS } from "@/constants/app-data";
+import apiClient from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { COLORS } from "@/constants/app-data";
+import { ActivityIndicator, Alert, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
+/**
+ * ChangePasswordScreen — allows authenticated users to change their password.
+ * Calls POST /api/auth/change-password with { oldPassword, newPassword }.
+ */
 export default function ChangePasswordScreen() {
     const router = useRouter();
+    const [oldPassword, setOldPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [oldPasswordVisible, setOldPasswordVisible] = useState(false);
     const [newPasswordVisible, setNewPasswordVisible] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const handleUpdatePassword = async () => {
+        if (!oldPassword || !newPassword || !confirmPassword) {
+            Alert.alert("Error", "Please fill in all fields.");
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            Alert.alert("Error", "New password must be at least 6 characters.");
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            Alert.alert("Error", "New passwords do not match.");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await apiClient.post('/auth/change-password', {
+                oldPassword,
+                newPassword,
+            });
+            Alert.alert("Success", "Password changed successfully.", [
+                { text: "OK", onPress: () => router.back() },
+            ]);
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Failed to change password.';
+            Alert.alert("Error", message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -31,6 +73,8 @@ export default function ChangePasswordScreen() {
                         secureTextEntry={!oldPasswordVisible} 
                         placeholder="••••••••" 
                         placeholderTextColor="#A0ABC0"
+                        value={oldPassword}
+                        onChangeText={setOldPassword}
                     />
                     <TouchableOpacity onPress={() => setOldPasswordVisible(!oldPasswordVisible)}>
                         <Ionicons name={oldPasswordVisible ? "eye-outline" : "eye-off-outline"} size={20} color="#A0ABC0" />
@@ -44,6 +88,8 @@ export default function ChangePasswordScreen() {
                         secureTextEntry={!newPasswordVisible} 
                         placeholder="••••••••" 
                         placeholderTextColor="#A0ABC0"
+                        value={newPassword}
+                        onChangeText={setNewPassword}
                     />
                     <TouchableOpacity onPress={() => setNewPasswordVisible(!newPasswordVisible)}>
                         <Ionicons name={newPasswordVisible ? "eye-outline" : "eye-off-outline"} size={20} color="#A0ABC0" />
@@ -57,11 +103,17 @@ export default function ChangePasswordScreen() {
                         secureTextEntry={!newPasswordVisible} 
                         placeholder="••••••••" 
                         placeholderTextColor="#A0ABC0"
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
                     />
                 </View>
 
-                <TouchableOpacity style={styles.saveBtn} onPress={() => router.back()}>
-                    <Text style={styles.saveBtnText}>Update Password</Text>
+                <TouchableOpacity style={styles.saveBtn} onPress={handleUpdatePassword} disabled={loading}>
+                    {loading ? (
+                        <ActivityIndicator color="#FFF" />
+                    ) : (
+                        <Text style={styles.saveBtnText}>Update Password</Text>
+                    )}
                 </TouchableOpacity>
             </ScrollView>
         </SafeAreaView>

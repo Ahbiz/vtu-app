@@ -39,6 +39,10 @@ app.use('/api/vtu', vtuRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // Health check endpoint
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.get('/', (_req, res) => {
   res.send('Server is running!');
 });

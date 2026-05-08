@@ -21,18 +21,45 @@ const QUICKVTU_BASE_URL = 'https://quickvtu.com/api';
 const QUICKVTU_USERNAME = process.env.QUICKVTU_USERNAME as string;
 const QUICKVTU_PASSWORD = process.env.QUICKVTU_PASSWORD as string;
 
-// The access token may be set directly via env or refreshed at runtime
+// In-memory token cache — refreshed every 23 hours to stay ahead of expiry
 let accessToken = process.env.QUICKVTU_ACCESS_TOKEN || '';
+let tokenExpiresAt = 0; // Unix timestamp in ms
 
 /**
- * Creates an axios instance with the current QuickVTU access token.
- * Called per-request to ensure the latest token is always used.
+ * Returns a valid QuickVTU access token, refreshing it if expired.
+ * Caches the token in memory for 23 hours to avoid unnecessary auth calls.
  */
-const getClient = (): AxiosInstance => {
+const getQuickVTUToken = async (): Promise<string> => {
+  const now = Date.now();
+  if (accessToken && now < tokenExpiresAt) {
+    return accessToken;
+  }
+
+  const credentials = Buffer.from(`${QUICKVTU_USERNAME}:${QUICKVTU_PASSWORD}`).toString('base64');
+  const response = await axios.post(
+    `${QUICKVTU_BASE_URL}/user`,
+    {},
+    { headers: { Authorization: `Basic ${credentials}` } },
+  );
+
+  if (response.data.status !== 'success') {
+    throw new Error(`QuickVTU auth failed: ${response.data.message || 'Unknown error'}`);
+  }
+
+  accessToken = response.data.AccessToken;
+  tokenExpiresAt = now + 23 * 60 * 60 * 1000; // 23 hours
+  return accessToken;
+};
+
+/**
+ * Creates an axios instance with a fresh QuickVTU access token.
+ */
+const getClient = async (): Promise<AxiosInstance> => {
+  const token = await getQuickVTUToken();
   return axios.create({
     baseURL: QUICKVTU_BASE_URL,
     headers: {
-      Authorization: `Token ${accessToken}`,
+      Authorization: `Token ${token}`,
       'Content-Type': 'application/json',
     },
   });
@@ -95,7 +122,7 @@ export const buyAirtime = async (params: {
   requestId: string;
 }): Promise<any> => {
   try {
-    const client = getClient();
+    const client = await getClient();
     const response = await client.post('/topup/', {
       network: params.network,
       phone: params.phone,
@@ -129,7 +156,7 @@ export const buyData = async (params: {
   requestId: string;
 }): Promise<any> => {
   try {
-    const client = getClient();
+    const client = await getClient();
     const response = await client.post('/data', {
       network: params.network,
       phone: params.phone,
@@ -162,7 +189,7 @@ export const buyCable = async (params: {
   requestId: string;
 }): Promise<any> => {
   try {
-    const client = getClient();
+    const client = await getClient();
     const response = await client.post('/cable', {
       cable: params.cable,
       iuc: params.iuc,
@@ -186,7 +213,7 @@ export const buyCable = async (params: {
  */
 export const verifyIUC = async (iuc: string, cable: number): Promise<any> => {
   try {
-    const client = getClient();
+    const client = await getClient();
     const response = await client.get('/cable/cable-validation', {
       params: { iuc, cable },
     });
@@ -217,7 +244,7 @@ export const payElectricity = async (params: {
   requestId: string;
 }): Promise<any> => {
   try {
-    const client = getClient();
+    const client = await getClient();
     const response = await client.post('/bill', {
       disco: params.disco,
       meter_type: params.meterType,
@@ -247,7 +274,7 @@ export const verifyMeter = async (
   meterType: string,
 ): Promise<any> => {
   try {
-    const client = getClient();
+    const client = await getClient();
     const response = await client.get('/bill/bill-validation', {
       params: {
         meter_number: meterNumber,
@@ -261,3 +288,4 @@ export const verifyMeter = async (
     throw new Error(`QuickVTU meter verification failed: ${message}`);
   }
 };
+

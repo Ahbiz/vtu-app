@@ -5,12 +5,12 @@ import Notification from '../models/Notification';
 import Transaction from '../models/Transaction';
 import User from '../models/User';
 import {
-  buyAirtime as quickvtuBuyAirtime,
-  buyCable as quickvtuBuyCable,
-  buyData as quickvtuBuyData,
-  payElectricity as quickvtuPayElectricity,
-  verifyIUC as quickvtuVerifyIUC,
-  verifyMeter as quickvtuVerifyMeter,
+    buyAirtime as quickvtuBuyAirtime,
+    buyCable as quickvtuBuyCable,
+    buyData as quickvtuBuyData,
+    payElectricity as quickvtuPayElectricity,
+    verifyIUC as quickvtuVerifyIUC,
+    verifyMeter as quickvtuVerifyMeter,
 } from '../services/quickvtuService';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -38,6 +38,38 @@ import {
  */
 const generateRequestId = (prefix: string): string => {
   return `${prefix}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+};
+
+/**
+ * @desc    Get available data plans for a network
+ * @route   GET /api/vtu/data/plans?network=1
+ * @access  Private
+ *
+ * Returns hardcoded plans from QuickVTU docs (docs/quickvtu.md).
+ * These are static — update when QuickVTU changes their plan table.
+ */
+export const getDataPlans = async (req: AuthRequest, res: Response): Promise<void> => {
+  const ALL_PLANS = [
+    { id: 4,  network: 1, networkName: 'MTN',     type: 'SME',     name: '500MB',  amount: 390,  validity: '1 Month' },
+    { id: 5,  network: 1, networkName: 'MTN',     type: 'SME',     name: '1GB',    amount: 500,  validity: '1 Month' },
+    { id: 6,  network: 1, networkName: 'MTN',     type: 'SME',     name: '2GB',    amount: 1200, validity: '1 Month' },
+    { id: 7,  network: 1, networkName: 'MTN',     type: 'SME',     name: '3GB',    amount: 1800, validity: '1 Month' },
+    { id: 8,  network: 1, networkName: 'MTN',     type: 'SME',     name: '5GB',    amount: 3000, validity: '1 Month' },
+    { id: 24, network: 3, networkName: 'GLO',     type: 'GIFTING', name: '1.5GB',  amount: 465,  validity: '1 Month' },
+    { id: 25, network: 3, networkName: 'GLO',     type: 'GIFTING', name: '2.9GB',  amount: 940,  validity: '1 Month' },
+    { id: 26, network: 3, networkName: 'GLO',     type: 'GIFTING', name: '4.1GB',  amount: 1300, validity: '1 Month' },
+    { id: 27, network: 3, networkName: 'GLO',     type: 'GIFTING', name: '5.8GB',  amount: 1860, validity: '1 Month' },
+    { id: 28, network: 3, networkName: 'GLO',     type: 'GIFTING', name: '10GB',   amount: 3020, validity: '1 Month' },
+    { id: 29, network: 4, networkName: '9MOBILE', type: 'SME',     name: '1.1GB',  amount: 399,  validity: '1 Month' },
+    { id: 30, network: 4, networkName: '9MOBILE', type: 'SME',     name: '2GB',    amount: 760,  validity: '1 Month' },
+    { id: 33, network: 4, networkName: '9MOBILE', type: 'GIFTING', name: '1.5GB',  amount: 900,  validity: '1 Month' },
+    { id: 34, network: 4, networkName: '9MOBILE', type: 'GIFTING', name: '500MB',  amount: 450,  validity: '1 Month' },
+  ];
+
+  const networkId = req.query.network ? parseInt(req.query.network as string) : null;
+  const plans = networkId ? ALL_PLANS.filter(p => p.network === networkId) : ALL_PLANS;
+
+  res.status(200).json({ plans });
 };
 
 /**
@@ -86,12 +118,22 @@ export const purchaseAirtime = async (req: AuthRequest, res: Response): Promise<
     user.walletBalance = newBalance;
     await user.save();
 
-    // ── Call QuickVTU ───────────────────────────────────────────────────
+    // ── Call QuickVTU with retry ────────────────────────────────────────
     const requestId = generateRequestId('Airtime');
     const networkNames: Record<number, string> = { 1: 'MTN', 2: 'AIRTEL', 3: 'GLO', 4: '9MOBILE' };
 
     try {
-      const result = await quickvtuBuyAirtime({ network, phone, amount, requestId });
+      const result = await retry(
+        async (bail) => {
+          const res = await quickvtuBuyAirtime({ network, phone, amount, requestId });
+          // 400-level errors from QuickVTU are not retryable (bad input, insufficient balance, etc.)
+          if (res.status !== 'success' && res.status === 'failed') {
+            bail(new Error(res.message || 'Airtime purchase failed'));
+          }
+          return res;
+        },
+        { retries: 3, factor: 2, minTimeout: 1000, maxTimeout: 5000 },
+      );
 
       if (result.status === 'success') {
         // Record successful transaction

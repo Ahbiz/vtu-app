@@ -1,23 +1,20 @@
 import express from 'express';
 import {
-  purchaseAirtime,
-  purchaseCable,
-  purchaseData,
-  purchaseElectricity,
-  verifyMeterNumber,
-  verifySmartCard,
+    getDataPlans,
+    purchaseAirtime,
+    purchaseCable,
+    purchaseData,
+    purchaseElectricity,
+    verifyMeterNumber,
+    verifySmartCard,
 } from '../controllers/vtuController';
 import { protect } from '../middleware/auth';
 import { verifyPin } from '../middleware/verifyPin';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// VTU Routes
-//
-// Purchase routes require both JWT auth and transaction PIN verification.
-// Verification routes (IUC, meter) require only JWT auth — no PIN needed.
-// ─────────────────────────────────────────────────────────────────────────────
-
 const router = express.Router();
+
+// ── Data plans (auth only, no PIN) ────────────────────────────────────────────
+router.get('/data/plans', protect, getDataPlans);
 
 // ── Purchase endpoints (auth + PIN) ──────────────────────────────────────────
 router.post('/airtime', protect, verifyPin, purchaseAirtime);

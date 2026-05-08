@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import Notification from '../models/Notification';
+import ProcessedEvent from '../models/ProcessedEvent';
 import Transaction from '../models/Transaction';
 import User from '../models/User';
 import { generateReference, initializeTransaction, verifyTransaction } from '../services/paystackService';
@@ -124,13 +125,14 @@ export const webhook = async (req: RawBodyRequest, res: Response) => {
     if (event.event === 'charge.success') {
       const { reference, amount, customer, channel } = event.data;
 
-      // Guard against double-fulfillment: check if this reference was already processed
+      // Guard against double-fulfillment using ProcessedEvent collection (TTL: 24h)
       // Per docs: "confirm that you haven't already delivered value for that transaction"
-      const existing = await Transaction.findOne({ reference });
-      if (existing && existing.status === 'success') {
+      const alreadyProcessed = await ProcessedEvent.findOne({ eventId: reference });
+      if (alreadyProcessed) {
         console.log(`[Webhook] Duplicate event for reference ${reference} — skipped`);
         return;
       }
+      await ProcessedEvent.create({ eventId: reference });
 
       const user = await User.findOne({ email: customer.email });
       if (!user) {

@@ -39,6 +39,14 @@ export default function SecurityScreen() {
                     <Ionicons name="toggle" size={32} color={COLORS.primary} />
                 </View>
 
+                <TouchableOpacity style={styles.settingItem} onPress={() => router.push("/CreateNewPinScreen" as any)}>
+                    <View style={styles.settingLeft}>
+                        <Ionicons name="key" size={24} color={COLORS.primary} />
+                        <Text style={styles.settingLabel}>Set / Change Transaction PIN</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#A0ABC0" />
+                </TouchableOpacity>
+
                 <TouchableOpacity style={styles.settingItem} onPress={() => router.push("/ChangePasswordScreen" as any)}>
                     <View style={styles.settingLeft}>
                         <Ionicons name="lock-closed" size={24} color={COLORS.primary} />

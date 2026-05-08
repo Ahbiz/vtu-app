@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, StatusBar, Platform } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { COLORS } from "@/constants/app-data";
+import apiClient from "@/utils/api";
+import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, useFonts } from "@expo-google-fonts/poppins";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { useFonts, Poppins_600SemiBold, Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
-import { COLORS } from "@/constants/app-data";
+import { ActivityIndicator, Alert, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function CreateNewPinScreen() {
     const router = useRouter();
@@ -12,12 +13,42 @@ export default function CreateNewPinScreen() {
 
     const [newPin, setNewPin] = useState("");
     const [confirmPin, setConfirmPin] = useState("");
+    const [loading, setLoading] = useState(false);
 
     if (!fontsLoaded) return null;
 
-    const handleSave = () => {
+    /**
+     * Validates that both PINs match and are exactly 4 digits,
+     * then calls POST /api/auth/set-pin to save the hashed PIN.
+     */
+    const handleSave = async () => {
+        if (!newPin || !confirmPin) {
+            Alert.alert("Error", "Please fill in both PIN fields.");
+            return;
+        }
 
-        router.replace("/(dashboard)");
+        if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+            Alert.alert("Error", "PIN must be exactly 4 digits.");
+            return;
+        }
+
+        if (newPin !== confirmPin) {
+            Alert.alert("Error", "PINs do not match. Please try again.");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await apiClient.post('/auth/set-pin', { pin: newPin });
+            Alert.alert("Success", "Transaction PIN set successfully.", [
+                { text: "OK", onPress: () => router.back() },
+            ]);
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Failed to set PIN. Please try again.';
+            Alert.alert("Error", message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -73,8 +104,12 @@ export default function CreateNewPinScreen() {
             </ScrollView>
 
             <View style={styles.bottomContainer}>
-                <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-                    <Text style={styles.saveBtnText}>Save New PIN</Text>
+                <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading}>
+                    {loading ? (
+                        <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                        <Text style={styles.saveBtnText}>Save New PIN</Text>
+                    )}
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

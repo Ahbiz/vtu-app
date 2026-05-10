@@ -2,9 +2,10 @@ import { COLORS } from "@/constants/app-data";
 import apiClient from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import PhoneNumberInput, { PhoneNumberInputRef } from '../components/PhoneNumberInput';
 
 /**
  * EditProfileScreen — allows authenticated users to update their profile.
@@ -16,11 +17,13 @@ export default function EditProfileScreen() {
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
-    const [phone, setPhone] = useState("");
+    const [localPhone, setLocalPhone] = useState("");
+    const [formattedPhone, setFormattedPhone] = useState("");
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
 
-    // Pre-fill form with current profile data
+    const phoneRef = useRef<PhoneNumberInputRef>(null);
+
     useEffect(() => {
         const fetchProfile = async () => {
             try {
@@ -28,7 +31,7 @@ export default function EditProfileScreen() {
                 setFirstName(response.data.firstName || '');
                 setLastName(response.data.lastName || '');
                 setEmail(response.data.email || '');
-                setPhone(response.data.phone || '');
+                setLocalPhone(response.data.phone || '');
             } catch (error) {
                 console.error('Failed to fetch profile:', error);
             } finally {
@@ -44,12 +47,18 @@ export default function EditProfileScreen() {
             return;
         }
 
+        const checkValid = phoneRef.current?.isValidNumber(localPhone);
+        if (!checkValid) {
+            Alert.alert("Validation Error", "Please enter a valid phone number.");
+            return;
+        }
+
         try {
             setLoading(true);
             await apiClient.put('/auth/profile', {
                 firstName: firstName.trim(),
                 lastName: lastName.trim(),
-                phone: phone.trim(),
+                phone: formattedPhone,
             });
             Alert.alert("Success", "Profile updated successfully.", [
                 { text: "OK", onPress: () => router.back() },
@@ -90,9 +99,9 @@ export default function EditProfileScreen() {
 
                 <Text style={styles.label}>First Name</Text>
                 <View style={styles.inputContainer}>
-                    <TextInput 
-                        style={styles.input} 
-                        value={firstName} 
+                    <TextInput
+                        style={styles.input}
+                        value={firstName}
                         onChangeText={setFirstName}
                         placeholder="First name"
                         placeholderTextColor="#A0ABC0"
@@ -101,9 +110,9 @@ export default function EditProfileScreen() {
 
                 <Text style={styles.label}>Last Name</Text>
                 <View style={styles.inputContainer}>
-                    <TextInput 
-                        style={styles.input} 
-                        value={lastName} 
+                    <TextInput
+                        style={styles.input}
+                        value={lastName}
                         onChangeText={setLastName}
                         placeholder="Last name"
                         placeholderTextColor="#A0ABC0"
@@ -112,22 +121,23 @@ export default function EditProfileScreen() {
 
                 <Text style={styles.label}>Email Address</Text>
                 <View style={[styles.inputContainer, { backgroundColor: '#EFEFEF' }]}>
-                    <TextInput 
-                        style={[styles.input, { color: '#999' }]} 
-                        value={email} 
+                    <TextInput
+                        style={[styles.input, { color: '#999' }]}
+                        value={email}
                         editable={false}
                     />
                 </View>
 
                 <Text style={styles.label}>Phone Number</Text>
-                <View style={styles.inputContainer}>
-                    <TextInput 
-                        style={styles.input} 
-                        value={phone} 
-                        onChangeText={setPhone}
-                        keyboardType="phone-pad"
-                        placeholder="Phone number"
-                        placeholderTextColor="#A0ABC0"
+                <View style={styles.phoneWrapper}>
+                    <PhoneNumberInput
+                        ref={phoneRef}
+                        defaultCode="NG"
+                        defaultValue={localPhone}
+                        onChangeText={setLocalPhone}
+                        onChangeFormattedText={setFormattedPhone}
+                        placeholder="801 234 5678"
+                        containerStyle={styles.phoneContainer}
                     />
                 </View>
 
@@ -154,6 +164,14 @@ const styles = StyleSheet.create({
     label: { fontSize: 14, fontFamily: "Poppins_500Medium", color: "#444", marginBottom: 8 },
     inputContainer: { backgroundColor: "#F5F5F5", borderRadius: 12, paddingHorizontal: 16, height: 56, justifyContent: "center", marginBottom: 20 },
     input: { flex: 1, fontSize: 14, fontFamily: "Poppins_500Medium", color: "#111" },
+    phoneWrapper: { marginBottom: 20 },
+    phoneContainer: {
+        borderBottomWidth: 0,
+        backgroundColor: "#F5F5F5",
+        borderRadius: 12,
+        height: 56,
+        paddingHorizontal: 16,
+    },
     saveBtn: { backgroundColor: COLORS.primary, height: 56, borderRadius: 12, justifyContent: "center", alignItems: "center", marginTop: 20 },
     saveBtnText: { fontSize: 16, fontFamily: "Poppins_600SemiBold", color: "#FFF" },
 });

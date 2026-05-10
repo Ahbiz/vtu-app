@@ -7,6 +7,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import apiClient from "@/utils/api";
 import { useFonts, Poppins_600SemiBold, Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import DropdownModal from "@/components/DropdownModal";
+import { COLORS } from "@/constants/app-data";
 
 export default function CableTVScreen() {
     const router = useRouter();
@@ -19,6 +20,8 @@ export default function CableTVScreen() {
     const [pin, setPin] = useState("");
     const [loading, setLoading] = useState(false);
     const [walletBalance, setWalletBalance] = useState<number>(0);
+    const [savedPhone, setSavedPhone] = useState("");
+    const [hasTransactionPin, setHasTransactionPin] = useState(false);
 
     const [isProviderModalVisible, setProviderModalVisible] = useState(false);
     const [isPlanModalVisible, setPlanModalVisible] = useState(false);
@@ -29,6 +32,8 @@ export default function CableTVScreen() {
                 try {
                     const response = await apiClient.get('/auth/me');
                     setWalletBalance(response.data.walletBalance || 0);
+                    setSavedPhone(response.data.phone || "");
+                    setHasTransactionPin(response.data.hasTransactionPin || false);
                 } catch (error) {
                     console.error('Failed to fetch balance:', error);
                 }
@@ -75,6 +80,18 @@ export default function CableTVScreen() {
     };
 
     const handlePurchase = async () => {
+        if (!hasTransactionPin) {
+            Alert.alert(
+                "PIN Required",
+                "You need to set up a transaction PIN before making payments.",
+                [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Set Up PIN", onPress: () => router.push("/CreateNewPinScreen") }
+                ]
+            );
+            return;
+        }
+
         if (!provider || !smartcard || !plan || !pin) {
             Alert.alert("Error", "Please fill in all fields including your PIN.");
             return;
@@ -88,21 +105,46 @@ export default function CableTVScreen() {
 
         try {
             setLoading(true);
-            const response = await apiClient.post('/vtu/cable', {
-                cable: PROVIDER_MAP[provider],
-                iuc: smartcard.trim(),
-                cablePlan: selectedPlanData.id,
-                amount: selectedPlanData.amount,
-                pin: pin.trim()
-            });
+            
+            // 1. Verify SmartCard / IUC
+            const verifyRes = await apiClient.get(`/vtu/verify-iuc?iuc=${smartcard.trim()}&cable=${PROVIDER_MAP[provider]}`);
+            // Depending on the exact QuickVTU response structure, extract name:
+            const customerName = verifyRes.data?.data?.customer_name || verifyRes.data?.customer_name || 'Verified Customer';
 
-            Alert.alert("Success", "Cable subscription successful!", [
-                { text: "OK", onPress: () => router.back() }
-            ]);
+            // 2. Confirm Payment
+            Alert.alert(
+                "Confirm Details",
+                `Customer: ${customerName}\nPlan: ${plan}\nAmount: ₦${selectedPlanData.amount.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`,
+                [
+                    { text: "Cancel", style: "cancel", onPress: () => setLoading(false) },
+                    { 
+                        text: "Confirm & Pay", 
+                        onPress: async () => {
+                            try {
+                                await apiClient.post('/vtu/cable', {
+                                    cable: PROVIDER_MAP[provider],
+                                    iuc: smartcard.trim(),
+                                    cablePlan: selectedPlanData.id,
+                                    amount: selectedPlanData.amount,
+                                    pin: pin.trim()
+                                });
+
+                                Alert.alert("Success", "Cable subscription successful!", [
+                                    { text: "OK", onPress: () => router.back() }
+                                ]);
+                            } catch (error: any) {
+                                const message = error.response?.data?.message || 'Cable subscription failed. Please try again.';
+                                Alert.alert("Error", message);
+                            } finally {
+                                setLoading(false);
+                            }
+                        }
+                    }
+                ]
+            );
         } catch (error: any) {
-            const message = error.response?.data?.message || 'Cable subscription failed. Please try again.';
-            Alert.alert("Error", message);
-        } finally {
+            const message = error.response?.data?.message || 'Verification failed. Please check your details.';
+            Alert.alert("Verification Error", message);
             setLoading(false);
         }
     };
@@ -161,7 +203,7 @@ export default function CableTVScreen() {
                 </TouchableOpacity>
 
                 <Text style={styles.label}>Phone Number (Optional)</Text>
-                <View style={styles.inputContainer}>
+                <View style={[styles.inputContainer, { marginBottom: 8 }]}>
                     <TextInput 
                         style={styles.input} 
                         placeholder="08x xxx xxxx" 
@@ -171,6 +213,11 @@ export default function CableTVScreen() {
                         onChangeText={setPhone}
                     />
                 </View>
+                {savedPhone ? (
+                    <TouchableOpacity onPress={() => setPhone(savedPhone)} style={styles.autofillChip}>
+                        <Text style={styles.autofillText}>Use: {savedPhone}</Text>
+                    </TouchableOpacity>
+                ) : null}
 
                 <Text style={styles.label}>Transaction PIN</Text>
                 <View style={[styles.inputContainer, { marginBottom: 8 }]}>
@@ -227,6 +274,8 @@ const styles = StyleSheet.create({
     input: { flex: 1, fontSize: 14, fontFamily: "Poppins_500Medium", color: "#111" },
     inputText: { fontSize: 14, fontFamily: "Poppins_500Medium", color: "#111" },
     inputTextMuted: { fontSize: 14, fontFamily: "Poppins_500Medium", color: "#A0ABC0" },
+    autofillChip: { alignSelf: 'flex-start', backgroundColor: '#E6F0FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginBottom: 16 },
+    autofillText: { fontSize: 12, fontFamily: "Poppins_500Medium", color: COLORS.primary },
     bottomContainer: { paddingHorizontal: 20, paddingBottom: Platform.OS === "ios" ? 10 : 20 },
     payBtn: { backgroundColor: "#0052CC", height: 56, borderRadius: 12, justifyContent: "center", alignItems: "center" },
     payBtnText: { fontSize: 16, fontFamily: "Poppins_600SemiBold", color: "#FFFFFF" },

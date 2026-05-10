@@ -7,6 +7,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import apiClient from "@/utils/api";
 import { useFonts, Poppins_600SemiBold, Poppins_400Regular, Poppins_500Medium, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import DropdownModal from "@/components/DropdownModal";
+import { COLORS } from "@/constants/app-data";
 
 export default function ElectricityBillScreen() {
     const router = useRouter();
@@ -20,6 +21,8 @@ export default function ElectricityBillScreen() {
     const [pin, setPin] = useState("");
     const [loading, setLoading] = useState(false);
     const [walletBalance, setWalletBalance] = useState<number>(0);
+    const [savedPhone, setSavedPhone] = useState("");
+    const [hasTransactionPin, setHasTransactionPin] = useState(false);
 
     const [isProviderModalVisible, setProviderModalVisible] = useState(false);
     const [isMeterTypeModalVisible, setMeterTypeModalVisible] = useState(false);
@@ -30,6 +33,8 @@ export default function ElectricityBillScreen() {
                 try {
                     const response = await apiClient.get('/auth/me');
                     setWalletBalance(response.data.walletBalance || 0);
+                    setSavedPhone(response.data.phone || "");
+                    setHasTransactionPin(response.data.hasTransactionPin || false);
                 } catch (error) {
                     console.error('Failed to fetch balance:', error);
                 }
@@ -54,6 +59,18 @@ export default function ElectricityBillScreen() {
     const METER_TYPES = ["Prepaid", "Postpaid"];
 
     const handlePurchase = async () => {
+        if (!hasTransactionPin) {
+            Alert.alert(
+                "PIN Required",
+                "You need to set up a transaction PIN before making payments.",
+                [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Set Up PIN", onPress: () => router.push("/CreateNewPinScreen") }
+                ]
+            );
+            return;
+        }
+
         if (!provider || !meterType || !meterNumber || !amount || !pin) {
             Alert.alert("Error", "Please fill in all fields including your PIN.");
             return;
@@ -67,24 +84,48 @@ export default function ElectricityBillScreen() {
 
         try {
             setLoading(true);
-            const response = await apiClient.post('/vtu/electricity', {
-                disco: DISCO_MAP[provider],
-                meterType: meterType.toLowerCase(),
-                meterNumber: meterNumber.trim(),
-                amount: numAmount,
-                pin: pin.trim()
-            });
 
-            const token = response.data?.data?.token;
+            // 1. Verify Meter Number
+            const verifyRes = await apiClient.get(`/vtu/verify-meter?meter_number=${meterNumber.trim()}&disco=${DISCO_MAP[provider]}&meter_type=${meterType.toLowerCase()}`);
+            const customerName = verifyRes.data?.data?.customer_name || verifyRes.data?.customer_name || 'Verified Customer';
+
+            // 2. Confirm Payment
             Alert.alert(
-                "Success", 
-                `Electricity payment successful!${token ? `\n\nYour Token: ${token}` : ''}`, 
-                [{ text: "OK", onPress: () => router.back() }]
+                "Confirm Details",
+                `Customer: ${customerName}\nDisco: ${provider}\nAmount: ₦${numAmount.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`,
+                [
+                    { text: "Cancel", style: "cancel", onPress: () => setLoading(false) },
+                    { 
+                        text: "Confirm & Pay", 
+                        onPress: async () => {
+                            try {
+                                const response = await apiClient.post('/vtu/electricity', {
+                                    disco: DISCO_MAP[provider],
+                                    meterType: meterType.toLowerCase(),
+                                    meterNumber: meterNumber.trim(),
+                                    amount: numAmount,
+                                    pin: pin.trim()
+                                });
+
+                                const token = response.data?.data?.token || response.data?.token;
+                                Alert.alert(
+                                    "Success", 
+                                    `Electricity payment successful!${token ? `\n\nYour Token: ${token}` : ''}`, 
+                                    [{ text: "OK", onPress: () => router.back() }]
+                                );
+                            } catch (error: any) {
+                                const message = error.response?.data?.message || 'Electricity payment failed. Please try again.';
+                                Alert.alert("Error", message);
+                            } finally {
+                                setLoading(false);
+                            }
+                        }
+                    }
+                ]
             );
         } catch (error: any) {
-            const message = error.response?.data?.message || 'Electricity payment failed. Please try again.';
-            Alert.alert("Error", message);
-        } finally {
+            const message = error.response?.data?.message || 'Verification failed. Please check your meter details.';
+            Alert.alert("Verification Error", message);
             setLoading(false);
         }
     };
@@ -155,7 +196,7 @@ export default function ElectricityBillScreen() {
                 </View>
 
                 <Text style={styles.label}>Phone Number (Optional)</Text>
-                <View style={styles.inputContainer}>
+                <View style={[styles.inputContainer, { marginBottom: 8 }]}>
                     <TextInput 
                         style={styles.input} 
                         placeholder="08x xxx xxxx" 
@@ -165,6 +206,11 @@ export default function ElectricityBillScreen() {
                         onChangeText={setPhone}
                     />
                 </View>
+                {savedPhone ? (
+                    <TouchableOpacity onPress={() => setPhone(savedPhone)} style={styles.autofillChip}>
+                        <Text style={styles.autofillText}>Use: {savedPhone}</Text>
+                    </TouchableOpacity>
+                ) : null}
 
                 <Text style={styles.label}>Transaction PIN</Text>
                 <View style={[styles.inputContainer, { marginBottom: 8 }]}>
@@ -221,6 +267,8 @@ const styles = StyleSheet.create({
     input: { flex: 1, fontSize: 14, fontFamily: "Poppins_500Medium", color: "#111" },
     inputText: { fontSize: 14, fontFamily: "Poppins_500Medium", color: "#111" },
     inputTextMuted: { fontSize: 14, fontFamily: "Poppins_500Medium", color: "#A0ABC0" },
+    autofillChip: { alignSelf: 'flex-start', backgroundColor: '#E6F0FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginBottom: 16 },
+    autofillText: { fontSize: 12, fontFamily: "Poppins_500Medium", color: COLORS.primary },
     bottomContainer: { paddingHorizontal: 20, paddingBottom: Platform.OS === "ios" ? 10 : 20 },
     payBtn: { backgroundColor: "#0052CC", height: 56, borderRadius: 12, justifyContent: "center", alignItems: "center" },
     payBtnText: { fontSize: 16, fontFamily: "Poppins_600SemiBold", color: "#FFFFFF" },

@@ -36,6 +36,8 @@ export default function AirtimePurchaseScreen() {
     const [pin, setPin] = useState("");
     const [loading, setLoading] = useState(false);
     const [walletBalance, setWalletBalance] = useState<number>(0);
+    const [savedPhone, setSavedPhone] = useState("");
+    const [hasTransactionPin, setHasTransactionPin] = useState(false);
 
     useFocusEffect(
         useCallback(() => {
@@ -43,6 +45,8 @@ export default function AirtimePurchaseScreen() {
                 try {
                     const response = await apiClient.get('/auth/me');
                     setWalletBalance(response.data.walletBalance || 0);
+                    setSavedPhone(response.data.phone || "");
+                    setHasTransactionPin(response.data.hasTransactionPin || false);
                 } catch (error) {
                     console.error('Failed to fetch balance:', error);
                 }
@@ -59,6 +63,18 @@ export default function AirtimePurchaseScreen() {
     };
 
     const handlePurchase = async () => {
+        if (!hasTransactionPin) {
+            Alert.alert(
+                "PIN Required",
+                "You need to set up a transaction PIN before making payments.",
+                [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Set Up PIN", onPress: () => router.push("/CreateNewPinScreen") }
+                ]
+            );
+            return;
+        }
+
         if (!selectedNetwork || !phone || !amount || !pin) {
             Alert.alert("Error", "Please fill in all fields including your PIN.");
             return;
@@ -170,6 +186,11 @@ export default function AirtimePurchaseScreen() {
                         <Ionicons name="person-outline" size={20} color={COLORS.primary} />
                     </TouchableOpacity>
                 </View>
+                {savedPhone ? (
+                    <TouchableOpacity onPress={() => setPhone(savedPhone)} style={styles.autofillChip}>
+                        <Text style={styles.autofillText}>Use: {savedPhone}</Text>
+                    </TouchableOpacity>
+                ) : null}
 
                 <Text style={styles.label}>Transaction PIN</Text>
                 <View style={[styles.inputContainer, { marginBottom: 8 }]}>
@@ -229,6 +250,8 @@ const styles = StyleSheet.create({
     input: { flex: 1, fontSize: 14, fontFamily: "Poppins_500Medium", color: "#111" },
     phoneRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
     contactBtn: { width: 54, height: 54, backgroundColor: "#E6F0FF", borderRadius: 10, justifyContent: "center", alignItems: "center" },
+    autofillChip: { alignSelf: 'flex-start', backgroundColor: '#E6F0FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginTop: -8, marginBottom: 16 },
+    autofillText: { fontSize: 12, fontFamily: "Poppins_500Medium", color: COLORS.primary },
     forgotBtn: { alignSelf: "flex-end" },
     forgotText: { fontSize: 13, fontFamily: "Poppins_600SemiBold", color: "#111" },
     bottomContainer: { paddingHorizontal: 20, paddingBottom: Platform.OS === "ios" ? 10 : 20 },

@@ -125,9 +125,8 @@ export const purchaseAirtime = async (req: AuthRequest, res: Response): Promise<
 
     try {
       const result = await retry(
-        async (bail) => {
+        async (bail: (e: Error) => void) => {
           const vtuResult = await quickvtuBuyAirtime({ network, phone, amount, requestId });
-          // 400-level errors from QuickVTU are not retryable (bad input, insufficient balance, etc.)
           if (vtuResult.status !== 'success' && vtuResult.status === 'failed') {
             bail(new Error(vtuResult.message || 'Airtime purchase failed'));
           }

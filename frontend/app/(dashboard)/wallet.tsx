@@ -2,12 +2,12 @@ import { COLORS } from "@/constants/app-data";
 import apiClient from "@/utils/api";
 import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, useFonts } from "@expo-google-fonts/poppins";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "@react-navigation/native";
 
 interface VirtualAccount {
     accountNumber: string;
@@ -20,6 +20,8 @@ export default function WalletScreen() {
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [virtualAccount, setVirtualAccount] = useState<VirtualAccount | null>(null);
     const [walletBalance, setWalletBalance] = useState<number>(0);
+    const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+    const [loadingTx, setLoadingTx] = useState(true);
     const [fontsLoaded] = useFonts({
         Poppins_600SemiBold,
         Poppins_400Regular,
@@ -40,9 +42,46 @@ export default function WalletScreen() {
                     console.error('Failed to fetch user profile:', error);
                 }
             };
+
+            const fetchTransactions = async () => {
+                try {
+                    const response = await apiClient.get('/wallet/transactions?limit=5');
+                    setRecentTransactions(response.data.transactions);
+                } catch (error) {
+                    console.error("Failed to fetch transactions:", error);
+                } finally {
+                    setLoadingTx(false);
+                }
+            };
+
             fetchProfile();
+            fetchTransactions();
         }, [])
     );
+
+    const renderTransaction = (item: any) => {
+        const isCredit = item.type === 'funding' || item.type === 'refund';
+        const iconColor = isCredit ? "#00A86B" : "#FF3B30";
+        const iconBg = isCredit ? "rgba(0, 168, 107, 0.1)" : "rgba(255, 59, 48, 0.1)";
+        const amountPrefix = isCredit ? "+" : "-";
+
+        return (
+            <View key={item._id} style={styles.transactionItem}>
+                <View style={styles.txLeft}>
+                    <View style={[styles.txIconBox, { backgroundColor: iconBg }]}>
+                        <Ionicons name={isCredit ? "arrow-down" : "arrow-up"} size={20} color={iconColor} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.txTitle} numberOfLines={1}>{item.description || item.type}</Text>
+                        <Text style={styles.txDate}>{new Date(item.createdAt).toLocaleString()}</Text>
+                    </View>
+                </View>
+                <Text style={[styles.txAmount, { color: isCredit ? "#00A86B" : "#111" }]}>
+                    {amountPrefix}₦{item.amount.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                </Text>
+            </View>
+        );
+    };
 
     if (!fontsLoaded) return null;
 
@@ -137,16 +176,26 @@ export default function WalletScreen() {
                 </View>
 
                 <View style={styles.transactionsSection}>
-                    <Text style={styles.sectionTitleSmall}>Transaction History</Text>
-                    <View style={styles.emptyState}>
-                        <View style={styles.emptyIconBox}>
-                            <Ionicons name="wallet-outline" size={40} color="#C5C6FF" />
+                    <Text style={styles.sectionTitleSmall}>Recent Transactions</Text>
+                    {loadingTx ? (
+                        <View style={{ paddingVertical: 40, alignItems: "center" }}>
+                            <ActivityIndicator size="large" color={COLORS.primary} />
                         </View>
-                        <Text style={styles.emptyTitle}>No transactions yet</Text>
-                        <Text style={styles.emptySubtitle}>
-                            Your transaction history will appear here once you start using your wallet.
-                        </Text>
-                    </View>
+                    ) : recentTransactions.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <View style={styles.emptyIconBox}>
+                                <Ionicons name="wallet-outline" size={40} color="#C5C6FF" />
+                            </View>
+                            <Text style={styles.emptyTitle}>No transactions yet</Text>
+                            <Text style={styles.emptySubtitle}>
+                                Your transaction history will appear here once you start using your wallet.
+                            </Text>
+                        </View>
+                    ) : (
+                        <View style={{ marginTop: 8 }}>
+                            {recentTransactions.map(renderTransaction)}
+                        </View>
+                    )}
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -188,4 +237,10 @@ const styles = StyleSheet.create({
     emptyIconBox: { width: 72, height: 72, borderRadius: 36, backgroundColor: COLORS.primaryGhost, justifyContent: "center", alignItems: "center", marginBottom: 16 },
     emptyTitle: { fontSize: 15, fontFamily: "Poppins_600SemiBold", fontWeight: "600", color: COLORS.textSecondary, marginBottom: 6 },
     emptySubtitle: { fontSize: 13, fontFamily: "Poppins_400Regular", color: COLORS.textMuted, textAlign: "center", lineHeight: 20, paddingHorizontal: 30 },
+    transactionItem: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F0F0F0" },
+    txLeft: { flexDirection: "row", alignItems: "center", flex: 1, marginRight: 12 },
+    txIconBox: { width: 44, height: 44, borderRadius: 12, justifyContent: "center", alignItems: "center", marginRight: 12, flexShrink: 0 },
+    txTitle: { fontSize: 14, fontFamily: "Poppins_600SemiBold", color: "#111", marginBottom: 2, textTransform: "capitalize" },
+    txDate: { fontSize: 12, fontFamily: "Poppins_400Regular", color: "#888" },
+    txAmount: { fontSize: 14, fontFamily: "Poppins_600SemiBold", flexShrink: 0, textAlign: "right" },
 });

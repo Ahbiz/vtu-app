@@ -7,7 +7,7 @@ import { PaystackProvider } from 'react-native-paystack-webview';
 import 'react-native-reanimated';
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  anchor: 'OnboardingScreen',
 };
 
 export default function RootLayout() {

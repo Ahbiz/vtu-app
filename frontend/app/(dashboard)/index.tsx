@@ -300,7 +300,7 @@ export default function HomeScreen() {
                                         <View style={[styles.txIconBox, { backgroundColor: isCredit ? "rgba(0,168,107,0.1)" : "rgba(255,59,48,0.1)" }]}>
                                             <Ionicons name={isCredit ? "arrow-down" : "arrow-up"} size={18} color={isCredit ? "#00A86B" : "#FF3B30"} />
                                         </View>
-                                        <View style={{ flex: 1 }}>
+                                        <View style={{ flex: 1, marginRight: 8 }}>
                                             <Text style={styles.txTitle} numberOfLines={1}>{item.description || item.type}</Text>
                                             <Text style={styles.txDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
                                         </View>
@@ -620,8 +620,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     txItem: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F5F5F5", width: "100%", paddingHorizontal: 16 },
-    txIconBox: { width: 40, height: 40, borderRadius: 10, justifyContent: "center", alignItems: "center", marginRight: 12 },
+    txIconBox: { width: 40, height: 40, borderRadius: 10, justifyContent: "center", alignItems: "center", marginRight: 12, flexShrink: 0 },
     txTitle: { fontSize: 14, fontFamily: "Poppins_600SemiBold", color: "#111", textTransform: "capitalize" },
     txDate: { fontSize: 12, fontFamily: "Poppins_400Regular", color: "#888", marginTop: 2 },
-    txAmount: { fontSize: 14, fontFamily: "Poppins_600SemiBold" },
+    txAmount: { fontSize: 14, fontFamily: "Poppins_600SemiBold", flexShrink: 0, textAlign: "right" },
 });

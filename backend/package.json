@@ -28,6 +28,7 @@
     "twilio": "^6.0.0"
   },
   "devDependencies": {
+    "@types/async-retry": "^1.4.9",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",

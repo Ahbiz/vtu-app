@@ -1,56 +1,36 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import CountryPicker, { Country } from "react-native-country-picker-modal";
+import { useRef, useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import apiClient from '../utils/api';
+import PhoneNumberInput, { PhoneNumberInputRef } from "../components/PhoneNumberInput";
+import apiClient from "../utils/api";
 
 export default function RegisterScreen() {
-    const router = useRouter()
+    const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
-    const [countryCode, setCountryCode] = useState<any>("NG");
-    const [callingCode, setCallingCode] = useState("234");
-    const [pickerVisible, setPickerVisible] = useState(false);
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
-    const [phoneNumber, setPhoneNumber] = useState("");
+    const [localPhone, setLocalPhone] = useState("");
+    const [formattedPhone, setFormattedPhone] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
 
-    const onSelectCountry = (country: Country) => {
-        setCountryCode(country.cca2);
-        setCallingCode(country.callingCode[0])
-        setPickerVisible(false);
-    };
-
-    const formatPhoneNumber = (text: string) => {
-        const cleaned = text.replace(/\D/g, '');
-        const startsWithZero = cleaned.startsWith('0');
-        const group1Size = startsWithZero ? 4 : 3;
-        const group2Size = 3;
-        const group3Size = 4;
-
-        let formatted = '';
-        if (cleaned.length > 0) {
-            formatted += cleaned.substring(0, group1Size);
-        }
-        if (cleaned.length > group1Size) {
-            formatted += ' ' + cleaned.substring(group1Size, group1Size + group2Size);
-        }
-        if (cleaned.length > group1Size + group2Size) {
-            formatted += ' ' + cleaned.substring(group1Size + group2Size, group1Size + group2Size + group3Size);
-        }
-
-        return formatted;
-    };
-
-    const handlePhoneNumberChange = (text: string) => {
-        setPhoneNumber(formatPhoneNumber(text));
-    };
+    const phoneRef = useRef<PhoneNumberInputRef>(null);
 
     const handleContinue = async () => {
-        if (!fullName.trim() || !email.trim() || !phoneNumber.trim() || !password.trim()) {
+        if (!fullName.trim() || !email.trim() || !localPhone.trim() || !password.trim()) {
             Alert.alert("Error", "Please fill in all fields before proceeding.");
             return;
         }
@@ -61,6 +41,12 @@ export default function RegisterScreen() {
             return;
         }
 
+        const checkValid = phoneRef.current?.isValidNumber(localPhone);
+        if (!checkValid) {
+            Alert.alert("Validation Error", "Please enter a valid phone number.");
+            return;
+        }
+
         const nameParts = fullName.trim().split(/\s+/);
         if (nameParts.length < 2) {
             Alert.alert("Validation Error", "Please enter your full name (first and last name).");
@@ -68,25 +54,21 @@ export default function RegisterScreen() {
         }
 
         const firstName = nameParts[0];
-        const lastName = nameParts.slice(1).join(' ');
-        const rawPhone = phoneNumber.replace(/\s/g, '');
-        const phone = rawPhone.startsWith('0')
-            ? `+${callingCode}${rawPhone.slice(1)}`
-            : `+${callingCode}${rawPhone}`;
+        const lastName = nameParts.slice(1).join(" ");
 
         try {
             setLoading(true);
-            await apiClient.post('/auth/register', {
+            await apiClient.post("/auth/register", {
                 firstName,
                 lastName,
                 email: email.trim(),
-                phone,
+                phone: formattedPhone,
                 password,
             });
-
             router.push({ pathname: "/VerifyAccountScreen", params: { email: email.trim() } });
         } catch (error: any) {
-            const message = error.response?.data?.message || 'Registration failed. Please try again.';
+            const message =
+                error.response?.data?.message || "Registration failed. Please try again.";
             Alert.alert("Error", message);
         } finally {
             setLoading(false);
@@ -94,103 +76,129 @@ export default function RegisterScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <KeyboardAvoidingView behavior="padding"
+        <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+            <KeyboardAvoidingView
+                behavior="padding"
                 keyboardVerticalOffset={Platform.OS === "android" ? 90 : 0}
-                style={{ flex: 1 }}>
-                <ScrollView showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+                style={{ flex: 1 }}
+            >
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
-                    automaticallyAdjustKeyboardInsets={true}>
-                    <View style={styles.logoRow}>
-                        <View style={styles.letterBox}>
-                            <Text style={styles.letterInBox}>A</Text>
+                    automaticallyAdjustKeyboardInsets
+                >
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <View style={styles.logoRow}>
+                            <View style={styles.letterBox}>
+                                <Text style={styles.letterInBox}>A</Text>
+                            </View>
+                            <Text style={styles.logoText}>hbizPay</Text>
                         </View>
-                        <Text style={styles.logoText}>hbizPay</Text>
+                        <Text style={styles.headingText}>Create your account</Text>
+                        <Text style={styles.subText}>
+                            Join thousands topping up smarter every day.
+                        </Text>
                     </View>
 
-                    <View style={styles.fieldWrapper}>
-                        <Text style={styles.label}>Full name</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="e.g. Ahbiz Mohammed"
-                            placeholderTextColor="#AAAAAA"
-                            value={fullName}
-                            onChangeText={setFullName}
-                        />
-                    </View>
-
-                    <View style={styles.fieldWrapper}>
-                        <Text style={styles.label}>Email</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Ahbiz123@gmail.com"
-                            placeholderTextColor="#AAAAAA"
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                            value={email}
-                            onChangeText={setEmail}
-                        />
-                    </View>
-
-                    <View style={styles.fieldWrapper}>
-                        <Text style={styles.label}>Phone Number</Text>
-                        <View style={styles.phoneRow}>
-                            <TouchableOpacity
-                                style={styles.countryPickerButton}
-                                onPress={() => setPickerVisible(true)}
-                            >
-                                <CountryPicker
-                                    countryCode={countryCode}
-                                    withFlag
-                                    withCallingCode
-                                    withFilter
-                                    withModal
-                                    visible={pickerVisible}
-                                    onSelect={onSelectCountry}
-                                    onClose={() => setPickerVisible(false)}
+                    {/* Form card */}
+                    <View style={styles.card}>
+                        {/* Full name */}
+                        <View style={styles.fieldWrapper}>
+                            <Text style={styles.label}>Full Name</Text>
+                            <View style={styles.inputRow}>
+                                <Ionicons name="person-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="e.g. Ahbiz Mohammed"
+                                    placeholderTextColor="#9CA3AF"
+                                    value={fullName}
+                                    onChangeText={setFullName}
                                 />
-                                <Text style={styles.callingCodeText}>+{callingCode}</Text>
-                            </TouchableOpacity>
+                            </View>
+                        </View>
 
-                            <TextInput
-                                style={[styles.input, styles.phoneNumberInput]}
-                                value={phoneNumber}
-                                onChangeText={handlePhoneNumberChange}
-                                placeholder="Enter Phone Number"
-                                placeholderTextColor="#AAAAAA"
-                                keyboardType="phone-pad"
+                        {/* Email */}
+                        <View style={styles.fieldWrapper}>
+                            <Text style={styles.label}>Email Address</Text>
+                            <View style={styles.inputRow}>
+                                <Ionicons name="mail-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="you@example.com"
+                                    placeholderTextColor="#9CA3AF"
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    value={email}
+                                    onChangeText={setEmail}
+                                />
+                            </View>
+                        </View>
+
+                        {/* Phone */}
+                        <View style={styles.fieldWrapper}>
+                            <Text style={styles.label}>Phone Number</Text>
+                            <PhoneNumberInput
+                                ref={phoneRef}
+                                defaultCode="NG"
+                                onChangeText={setLocalPhone}
+                                onChangeFormattedText={setFormattedPhone}
+                                placeholder="801 234 5678"
                             />
                         </View>
-                    </View>
 
-                    <View style={styles.fieldWrapper}>
-                        <Text style={styles.label}>Password</Text>
-                        <View style={styles.passwordInputRow}>
-                            <TextInput
-                                style={[styles.input, { flex: 1 }]}
-                                placeholder="Enter New Password"
-                                placeholderTextColor="#AAAAAA"
-                                secureTextEntry={!showPassword}
-                                value={password}
-                                onChangeText={setPassword}
-                            />
-                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                <Ionicons
-                                    name={showPassword ? "eye-outline" : "eye-off-outline"}
-                                    size={20}
-                                    color="#AAAAAA"
+                        {/* Password */}
+                        <View style={styles.fieldWrapper}>
+                            <Text style={styles.label}>Password</Text>
+                            <View style={styles.inputRow}>
+                                <Ionicons name="lock-closed-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
+                                <TextInput
+                                    style={[styles.input, { flex: 1 }]}
+                                    placeholder="Create a strong password"
+                                    placeholderTextColor="#9CA3AF"
+                                    secureTextEntry={!showPassword}
+                                    value={password}
+                                    onChangeText={setPassword}
                                 />
-                            </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => setShowPassword(!showPassword)}
+                                    style={styles.eyeBtn}
+                                >
+                                    <Ionicons
+                                        name={showPassword ? "eye-outline" : "eye-off-outline"}
+                                        size={20}
+                                        color="#9CA3AF"
+                                    />
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.button} onPress={handleContinue} disabled={loading}>
+
+                    {/* CTA */}
+                    <TouchableOpacity
+                        style={[styles.button, loading && styles.buttonDisabled]}
+                        onPress={handleContinue}
+                        disabled={loading}
+                        activeOpacity={0.85}
+                    >
                         {loading ? (
-                            <ActivityIndicator color="white" />
+                            <ActivityIndicator color="#FFFFFF" />
                         ) : (
-                            <Text style={styles.buttontext}>Continue</Text>
+                            <>
+                                <Text style={styles.buttonText}>Continue</Text>
+                                <Text style={styles.buttonArrow}>→</Text>
+                            </>
                         )}
                     </TouchableOpacity>
+
+                    {/* Footer */}
+                    <View style={styles.footerRow}>
+                        <Text style={styles.footerText}>Already have an account? </Text>
+                        <TouchableOpacity onPress={() => router.push("/LoginScreen" as any)}>
+                            <Text style={styles.footerLink}>Sign in</Text>
+                        </TouchableOpacity>
+                    </View>
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -199,105 +207,150 @@ export default function RegisterScreen() {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: "white",
         flex: 1,
+        backgroundColor: "#EEF2FF",
+    },
+    scrollContent: {
+        flexGrow: 1,
+        paddingBottom: 40,
     },
 
+    // ── Header ───────────────────────────────────────────────────────────────
+    header: {
+        alignItems: "center",
+        paddingTop: 40,
+        paddingBottom: 28,
+        paddingHorizontal: 24,
+    },
     logoRow: {
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "center",
-        marginTop: 70,
-        marginBottom: 35
+        gap: 8,
+        marginBottom: 24,
     },
-
     letterBox: {
-        width: 52,
-        height: 52,
-        backgroundColor: "#6366FF",
-        borderRadius: 14,
+        width: 36,
+        height: 36,
+        backgroundColor: "#4F46E5",
+        borderRadius: 10,
         justifyContent: "center",
         alignItems: "center",
-        marginRight: 4,
-        transform: [{ rotate: "-8deg" }],
     },
-
     letterInBox: {
-        fontSize: 30,
+        fontSize: 20,
         fontWeight: "800",
         color: "#FFFFFF",
     },
-
     logoText: {
-        fontSize: 40,
+        fontSize: 26,
         fontWeight: "800",
-        color: "#6366FF",
-        letterSpacing: 0.5,
+        color: "#111827",
+    },
+    headingText: {
+        fontSize: 24,
+        fontWeight: "700",
+        color: "#111827",
+        marginBottom: 8,
+        textAlign: "center",
+    },
+    subText: {
+        fontSize: 15,
+        color: "#6B7280",
+        textAlign: "center",
+        lineHeight: 22,
     },
 
+    // ── Form card ────────────────────────────────────────────────────────────
+    card: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 20,
+        marginHorizontal: 20,
+        paddingHorizontal: 20,
+        paddingTop: 24,
+        paddingBottom: 8,
+        shadowColor: "#4F46E5",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 16,
+        elevation: 4,
+    },
     fieldWrapper: {
-        marginTop: 20,
-        marginHorizontal: 27,
+        marginBottom: 20,
     },
-
     label: {
-        color: "#AAAAAA",
         fontSize: 13,
-        marginBottom: 5,
+        fontWeight: "500",
+        color: "#6B7280",
+        marginBottom: 8,
     },
-
+    inputRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#F8FAFC",
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+        paddingHorizontal: 12,
+        height: 50,
+    },
+    inputIcon: {
+        marginRight: 10,
+    },
     input: {
-        fontSize: 16,
-        fontWeight: "500",
-        color: "#111111",
-        borderBottomWidth: 1,
-        borderBottomColor: "#E0E0E0",
-        paddingVertical: 6,
-    },
-
-    phoneRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-    },
-
-    countryPickerButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        borderBottomWidth: 1,
-        borderBottomColor: "#E0E0E0",
-        paddingVertical: 6,
-        gap: 4,
-    },
-
-    callingCodeText: {
-        fontSize: 16,
-        fontWeight: "500",
-        color: "#111111",
-    },
-
-    phoneNumberInput: {
         flex: 1,
+        fontSize: 15,
+        fontWeight: "500",
+        color: "#111827",
+    },
+    eyeBtn: {
+        padding: 4,
     },
 
-    passwordInputRow: {
+    // ── CTA button ───────────────────────────────────────────────────────────
+    button: {
+        backgroundColor: "#4F46E5",
+        height: 54,
+        borderRadius: 14,
         flexDirection: "row",
+        justifyContent: "center",
         alignItems: "center",
+        gap: 8,
+        marginHorizontal: 20,
+        marginTop: 24,
+        shadowColor: "#4F46E5",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 6,
     },
-
-    buttontext: {
-        fontFamily: "Poppins_600SemiBold",
+    buttonDisabled: {
+        opacity: 0.7,
+    },
+    buttonText: {
         fontSize: 16,
         fontWeight: "600",
-        color: "white",
+        color: "#FFFFFF",
+    },
+    buttonArrow: {
+        fontSize: 18,
+        color: "#FFFFFF",
+        fontWeight: "600",
     },
 
-    button: {
-        backgroundColor: "#6366FF",
-        paddingVertical: 16,
-        borderRadius: 20,
+    // ── Footer ───────────────────────────────────────────────────────────────
+    footerRow: {
+        flexDirection: "row",
+        justifyContent: "center",
         alignItems: "center",
-        marginHorizontal: 25,
-        marginTop: 70
-    }
+        marginTop: 20,
+    },
+    footerText: {
+        fontSize: 14,
+        color: "#9CA3AF",
+    },
+    footerLink: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#4F46E5",
+    },
 });
